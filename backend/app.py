@@ -275,10 +275,10 @@ def frontend_index_response():
     )
 
 
-app.mount("/static", LegacyAwareStaticFiles(directory="backend/static"), name="static")
-app.mount("/data", StaticFiles(directory="data"), name="data")
-if FRONTEND_ASSETS_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS_DIR)), name="assets")
+# app.mount("/static", LegacyAwareStaticFiles(directory="backend/static"), name="static")
+# app.mount("/data", StaticFiles(directory="data"), name="data")
+# if FRONTEND_ASSETS_DIR.exists():
+#     app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS_DIR)), name="assets")
 
 
 # 保存后台任务引用，用于优雅关闭

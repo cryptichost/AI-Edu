@@ -324,6 +324,7 @@
               <h3>课程资源管理</h3>
               <p class="hero-desc">按课程知识结构查看资源，并直接上传或删除节点资料。</p>
             </div>
+            <button class="ghost-btn" type="button" @click="rebuiltResourceDatabase">重建资料库</button>
             <button class="ghost-btn" type="button" @click="loadKnowledgeGraph">刷新课程树</button>
           </div>
 
@@ -439,7 +440,7 @@ import {
   uploadTeacherResources,
 } from "../../api/teacher";
 import {init, type ECharts} from "../../lib/echarts";
-import {fetchKnowledgeGraph} from "../../api/knowledgeGraph";
+import {fetchKnowledgeGraph, initRagResource} from "../../api/knowledgeGraph";
 import {type CourseNode} from "../../types/knowledgeGraph"
 import {
   type ClassOverviewResponse,
@@ -945,6 +946,12 @@ function closeStudentDetail() {
 
 async function loadKnowledgeGraph() {
   knowledgeGraph.value = await fetchKnowledgeGraph();
+}
+
+
+// 重建资料rag数据库，5E用
+function rebuiltResourceDatabase() {
+ void initRagResource();
 }
 
 function openUploadDialog(nodeName: string) {

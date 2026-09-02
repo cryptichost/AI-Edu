@@ -7,7 +7,7 @@
         <RouterLink to="/student/course-content" active-class="" exact-active-class="router-link-active">学习中心</RouterLink>
         <RouterLink to="/student/student-twin" active-class="" exact-active-class="router-link-active">诊断</RouterLink>
         <RouterLink to="/student/homework" active-class="" exact-active-class="router-link-active">作业</RouterLink>
-        <RouterLink to="/student/industry-intelligence" active-class="" exact-active-class="router-link-active">行业资讯</RouterLink>
+        <!-- <RouterLink to="/student/industry-intelligence" active-class="" exact-active-class="router-link-active">行业资讯</RouterLink> -->
         <RouterLink to="/student/profile" active-class="" exact-active-class="router-link-active">设置</RouterLink>
       </nav>
       <div class="nav-user">

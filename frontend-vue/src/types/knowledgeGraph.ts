@@ -5,7 +5,7 @@ export interface KnowledgeGraphResponse {
 }
 
 export interface CourseNode {
-    id?: number;
+    course_id?: number;
     node_id?: string;
     name: string;
     flag?: string;

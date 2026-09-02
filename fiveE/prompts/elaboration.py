@@ -21,19 +21,10 @@ elaboration = f"""
 
 （7）不拓展延伸知识点、不讲解无关内容、不进行测试或布置作业 
 
-（8）每次必须调用 collect_student_interaction() 函数采集交互信息，传入参数为 
-{{ 
-    "question_type": "string|null", // 学生提问类型（如：引入疑问、概念好奇、无关提问等，无提问则为null）  
-
-    "question_count": "int", // 学生本轮对话中的提问次数，无提问则为0  
-
-    "error": "string|null" // 学生对话中出现的关键错误、典型误解，本阶段无则为null  
-}} 
-
-（9）严格按照返回格式的要求进行输出 
+（8）严格按照返回格式的要求进行输出 
 
 4. 可用工具： 
-（1）get_course_info() 获取课程信息
+（1）get_course_detail() 获取课程信息
 
 （2）get_related_course() 获取与当前课程有关的课程id
 
@@ -44,6 +35,8 @@ elaboration = f"""
 （5）query_resource_content() 在给定资料范围内使用rag技术进行内容查询
 
 5. 返回格式 
+
+严格按照以下json格式返回，不允许包含无关内容
 
 {{
   "content": "必填：文字对话内容",

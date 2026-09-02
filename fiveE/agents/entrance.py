@@ -10,15 +10,6 @@ from ..models.orchestrator_response import OrchestratorResponse
 from ..session import check_session_exists
 
 
-async def is_initial(user_id: str, lesson_id: str) -> bool:
-    exists = await check_session_exists(user_id=user_id, course_id=lesson_id)
-    return not exists
-
-
-async def get_lesson_description(lesson_id: str) -> str:
-    pass
-
-
 class EntranceAgent(BaseAgent):
     # 5E
     engagement_agent: LlmAgent

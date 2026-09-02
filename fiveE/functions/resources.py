@@ -14,7 +14,7 @@ async def get_course_resources(course_id:str) -> List[str]:
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
-async def query_resources_detail(query: str):
+async def query_resources_content(query: str):
     embedding = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
     )

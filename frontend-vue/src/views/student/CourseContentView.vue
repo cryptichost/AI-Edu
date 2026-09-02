@@ -79,9 +79,17 @@
             >
               个性化路径
             </button>
+            <button
+              class="student-learning-v2-mode-tab"
+              :class="{ active: activeMode === 'quiz' }"
+              type="button"
+              @click="activeMode = 'quiz'"
+            >
+              在线测验
+            </button>
           </div>
           <div class="student-learning-v2-mode-hint">
-            {{ activeMode === 'content' ? '当前正在查看课程资源与 AI 助教，个性化路径可查看系统推荐的学习顺序' : '查看系统为你推荐的个性化学习路径' }}
+            {{ activeMode === 'content' ? '当前正在查看课程资源与 AI 助教，个性化路径可查看系统推荐的学习顺序' : activeMode === 'path' ? '查看系统为你推荐的个性化学习路径' : '进入在线测验模式，检验你的学习成果' }}
           </div>
         </div>
 
@@ -325,7 +333,7 @@
         </div>
 
         <!-- 个性化路径视图 -->
-        <div v-else>
+        <div v-else-if="activeMode === 'path'">
           <Suspense>
             <template #default>
               <PersonalizedPathPanel />
@@ -337,6 +345,16 @@
               </div>
             </template>
           </Suspense>
+        </div>
+
+        <!-- 在线测验视图 -->
+        <div v-else-if="activeMode === 'quiz'" class="student-learning-v2-quiz-mode">
+          <div class="student-learning-v2-quiz-mode-placeholder">
+            <div class="student-learning-v2-quiz-mode-icon">📝</div>
+            <h2>在线测验</h2>
+            <p>选择知识点或章节，开始测验以检验学习效果。</p>
+            <p class="muted">（测验功能开发中，敬请期待）</p>
+          </div>
         </div>
       </section>
 
@@ -368,7 +386,8 @@ import { homeworkListAssignmentsForNode } from "../../api/homework";
 import { fetchCurrentUser } from "../../api/login";
 import {CourseNode, KnowledgeGraphResponse} from "../../types/knowledgeGraph";
 import type { HomeworkAssignment } from "../../types/homework";
-import {fetchKnowledgeGraph} from "../../api/knowledgeGraph";
+import { fetchKnowledgeGraph } from "../../api/knowledgeGraph";
+import { getCourseIdByName } from "../../api/5E";
 
 // 懒加载个性化路径面板
 const PersonalizedPathPanel = defineAsyncComponent(() => 
@@ -380,7 +399,7 @@ const route = useRoute();
 const router = useRouter();
 
 // 页内模式切换
-const activeMode = ref<"content" | "path">("content");
+const activeMode = ref<"content" | "path" | "quiz">("content");
 
 // Viewer tab 状态
 type ViewerTab = "pdf" | "video" | "quiz" | "summary";
@@ -398,7 +417,7 @@ const selectedResource = ref("");
 const selectedResourceIndex = ref<number | null>(null);
 const nodeLoading = ref(false);
 const currentStudentId = ref("");
-const currentCourseId = ref("course_big_data");
+const currentCourseId = ref("");
 
 // 面包屑相关
 const currentCourseName = ref("大数据基础");
@@ -574,6 +593,11 @@ function getNodeFlag(node: CourseNode) {
   return "";
 }
 
+async function updateCurrentCourseId(node: CourseNode) {
+  const course_id = await getCourseIdByName(node.name);
+  currentCourseId.value = course_id;
+}
+
 async function selectNode(node: CourseNode) {
   // 设置加载状态
   nodeLoading.value = true;
@@ -586,6 +610,7 @@ async function selectNode(node: CourseNode) {
   summaryError.value = "";
   nodeHomework.value = [];
   nodeHomeworkError.value = "";
+  void updateCurrentCourseId(node);
   
   // 清空之前的资源选择
   selectedResource.value = "";
@@ -1590,5 +1615,42 @@ onBeforeUnmount(() => {
 
 .student-learning-v2-loading-state p {
   font-size: 14px;
+}
+
+/* 在线测验模式 - 占位视图 */
+.student-learning-v2-quiz-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(560px, 68vh, 760px);
+  background: #f8fafc;
+  border-radius: 0 0 14px 14px;
+}
+
+.student-learning-v2-quiz-mode-placeholder {
+  text-align: center;
+  padding: 48px;
+}
+
+.student-learning-v2-quiz-mode-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.student-learning-v2-quiz-mode-placeholder h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+  color: #303133;
+}
+
+.student-learning-v2-quiz-mode-placeholder p {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 8px;
+}
+
+.student-learning-v2-quiz-mode-placeholder .muted {
+  color: #c0c4cc;
+  font-size: 13px;
 }
 </style>

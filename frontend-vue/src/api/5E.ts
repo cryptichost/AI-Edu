@@ -68,3 +68,8 @@ export async function sendFiveEChatMessage(payload: {
         };
     }
 }
+
+export async function getCourseIdByName(courseName: string): Promise<string> {
+    const {data} = await apiClient.post<{ course_id: string }>("/api/5e/course/id-by-name", {course_name: courseName});
+    return data.course_id;
+}

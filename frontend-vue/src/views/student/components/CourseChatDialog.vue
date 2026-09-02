@@ -97,9 +97,8 @@ const messages = ref<ChatResponse[]>([]);
 const canChat = computed(() => Boolean(props.studentId && props.courseId));
 const subtitle = computed(() => {
   if (!canChat.value) return "正在获取当前学生信息...";
-  if (props.resourceLabel) return `结合当前资源：${props.resourceLabel}`;
   if (props.nodeName) return "围绕当前知识点进行 5E 学习引导";
-  return "选择课程节点后，助教会结合上下文进行引导";
+  return "";
 });
 
 function nowSeconds() {
@@ -116,6 +115,20 @@ function assistantMessage(content: string): ChatResponse {
     timestamp: nowSeconds(),
   };
 }
+
+const defaultAssistantMessage:ChatResponse = {
+  role: "assistant",
+  content: "你好，我是 5E AI 助教。你可以问我当前知识点怎么理解、怎么应用，或让我们开始一次探究式学习。",
+  buttons: [
+    {
+      show_text: "开始学习",
+      send_text: "开始学习",
+    }
+  ],
+  resources: [],
+  tests: [],
+  timestamp: nowSeconds(),
+};
 
 function messageClass(role: string) {
   return role === "user" ? "user" : "assistant";
@@ -134,7 +147,7 @@ async function scrollToBottom() {
 
 async function loadChatHistory() {
   if (!props.studentId || !props.courseId) {
-    messages.value = [assistantMessage("登录后即可使用 5E AI 助教。")];
+    messages.value = [assistantMessage("登录并选择课程后即可使用 5E AI 助教。")];
     return;
   }
 
@@ -142,7 +155,7 @@ async function loadChatHistory() {
     const history = await fetchChatHistory(props.studentId, props.courseId);
     messages.value = history.length
       ? history
-      : [assistantMessage("你好，我是 5E AI 助教。你可以问我当前知识点怎么理解、怎么应用，或让我们开始一次探究式学习。")];
+      : [defaultAssistantMessage];
   } catch {
     messages.value = [assistantMessage("历史对话暂时加载失败，但你仍然可以直接开始提问。")];
   }

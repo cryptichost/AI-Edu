@@ -45,6 +45,13 @@ async def api_get_course_id_by_name(data: CourseNameRequest, session_id: Optiona
 async def ping():
     return "pong"
 
+@router.post("/resource/rag/init")
+async def init_rag():
+    service.init_rag()
+
+@router.post("/resource/rag/add")
+async def add_rag_resource():
+    pass
 
 session_manager = get_session_manager()
 
