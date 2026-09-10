@@ -195,14 +195,6 @@
               <button
                 type="button"
                 class="student-learning-v2-viewer-tab"
-                :class="{ active: activeViewerTab === 'quiz' }"
-                @click="switchViewerTab('quiz')"
-              >
-                📝 在线测验
-              </button>
-              <button
-                type="button"
-                class="student-learning-v2-viewer-tab"
                 :class="{ active: activeViewerTab === 'summary' }"
                 @click="switchViewerTab('summary')"
               >
@@ -254,29 +246,6 @@
                 <div v-if="videoError" class="video-error-overlay">
                   <p>{{ videoError }}</p>
                   <button type="button" @click="retryVideo">重试</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- 在线测验面板 -->
-            <div v-else-if="activeViewerTab === 'quiz'" class="student-learning-v2-viewer-panel">
-              <div class="student-learning-v2-quiz-entry">
-                <h3>{{ currentNode.name }} - 在线测验</h3>
-                <p>围绕当前知识点快速开始测验，检验学习效果。</p>
-                <button type="button" class="primary-link button-like" @click="openQuiz">
-                  开始测验
-                </button>
-                <div class="student-learning-v2-quiz-topics">
-                  <p class="topics-label">快捷主题：</p>
-                  <button type="button" class="topic-chip" @click="quickQuiz('大数据基础概念')">
-                    大数据基础概念
-                  </button>
-                  <button type="button" class="topic-chip" @click="quickQuiz('数据获取')">
-                    数据获取
-                  </button>
-                  <button type="button" class="topic-chip" @click="quickQuiz('数据预处理')">
-                    数据预处理
-                  </button>
                 </div>
               </div>
             </div>
@@ -349,12 +318,12 @@
 
         <!-- 在线测验视图 -->
         <div v-else-if="activeMode === 'quiz'" class="student-learning-v2-quiz-mode">
-          <div class="student-learning-v2-quiz-mode-placeholder">
-            <div class="student-learning-v2-quiz-mode-icon">📝</div>
-            <h2>在线测验</h2>
-            <p>选择知识点或章节，开始测验以检验学习效果。</p>
-            <p class="muted">（测验功能开发中，敬请期待）</p>
-          </div>
+          <CourseQuizDialog
+            :course-id="currentCourseId"
+            :student-id="currentStudentId"
+            :course-name="currentCourseName"
+            :node-name="currentNode?.name ?? ''"
+          />
         </div>
       </section>
 
@@ -379,6 +348,7 @@ import Hls from "hls.js";
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import CourseChatDialog from "./components/CourseChatDialog.vue";
+import CourseQuizDialog from "./components/CourseQuizDialog.vue";
 import {
   generateCourseSummary,
 } from "../../api/client";
@@ -1617,40 +1587,13 @@ onBeforeUnmount(() => {
   font-size: 14px;
 }
 
-/* 在线测验模式 - 占位视图 */
+/* 在线测验模式 - 面板容器 */
 .student-learning-v2-quiz-mode {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
   min-height: clamp(560px, 68vh, 760px);
   background: #f8fafc;
   border-radius: 0 0 14px 14px;
-}
-
-.student-learning-v2-quiz-mode-placeholder {
-  text-align: center;
-  padding: 48px;
-}
-
-.student-learning-v2-quiz-mode-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
-.student-learning-v2-quiz-mode-placeholder h2 {
-  font-size: 22px;
-  margin-bottom: 12px;
-  color: #303133;
-}
-
-.student-learning-v2-quiz-mode-placeholder p {
-  font-size: 14px;
-  color: #606266;
-  margin-bottom: 8px;
-}
-
-.student-learning-v2-quiz-mode-placeholder .muted {
-  color: #c0c4cc;
-  font-size: 13px;
 }
 </style>
