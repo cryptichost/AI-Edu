@@ -174,3 +174,4 @@ data/user_data/test_new_student_123/
 # Windows
 *.lnk
 data/app.db
+data/**
