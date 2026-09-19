@@ -49,7 +49,7 @@ from HomeworkModule.api import router as homework_router
 from TeachingInteractionModule.api import router as teaching_interaction_router
 from TeachingResearchModule.api import router as teaching_research_router
 from TeacherInterventionModule.api import router as intervention_router
-from fiveE.apis import fiveE_router
+from FiveEModel.apis import fiveE_router
 from AgentModule.qa_agent import QA_Agent
 from QuizModule.quiz_agent import Quiz_Agent
 from QuizModule.definition_service import QuizDefinitionService
@@ -283,12 +283,6 @@ def frontend_index_response():
         "Frontend bundle not found. Please run npm run build in frontend.",
         status_code=503,
     )
-
-
-app.mount("/static", LegacyAwareStaticFiles(directory=str(BACKEND_ROOT / "static")), name="static")
-app.mount("/data", StaticFiles(directory=str(RUNTIME_DATA_DIR)), name="data")
-if FRONTEND_ASSETS_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS_DIR)), name="assets")
 
 
 # 保存后台任务引用，用于优雅关闭
