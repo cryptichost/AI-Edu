@@ -6,6 +6,7 @@ const AdminLayout = () => import("../layouts/AdminLayout.vue");
 const StudentLayout = () => import("../layouts/StudentLayout.vue");
 const TeacherLayout = () => import("../layouts/TeacherLayout.vue");
 const AdminDashboardView = () => import("../views/admin/AdminDashboardView.vue");
+const StudentChatHistoryView = () => import("../views/admin/StudentChatHistory.vue");
 const HomeView = () => import("../views/student/HomeView.vue");
 const LoginView = () => import("../views/LoginView.vue");
 const CourseContentView = () => import("../views/student/CourseContentView.vue");
@@ -191,6 +192,11 @@ const router = createRouter({
                     path: "dashboard",
                     name: "admin-dashboard",
                     component: AdminDashboardView,
+                },
+                {
+                    path: "student-chat-history",
+                    name: "admin-student-chat-history",
+                    component: StudentChatHistoryView,
                 },
             ],
         },

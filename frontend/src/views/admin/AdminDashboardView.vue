@@ -61,11 +61,13 @@ import PageHero from "../../components/ui/PageHero.vue";
 import {
   fetchAdminLlmLogs,
   fetchAdminStudents,
-  fetchAdminTeachers,
+  fetchAdminTeachers
+} from "../../api/admin";
+import {
   type AdminLlmLog,
   type AdminStudentRecord,
-  type AdminTeacherRecord,
-} from "../../api/studentTwin";
+  type AdminTeacherRecord
+} from "../../types/admin"
 
 type AdminTab = "users" | "tokens" | "conversations";
 type TimeRange = "week" | "month" | "all";

@@ -118,56 +118,6 @@ export interface HeatmapResponse {
     nodes: HeatmapNodeRow[];
 }
 
-
-export interface AdminTeacherRecord {
-    username: string;
-    name: string;
-    display_name?: string;
-    email?: string;
-    students?: string[];
-}
-
-export interface AdminStudentPreference {
-    course_type?: Array<{ name?: string }>;
-}
-
-export interface AdminStudentRecord {
-    username: string;
-    stu_name: string;
-    display_name?: string;
-    email?: string;
-    img?: string;
-    teacher?: string;
-    learning_goals?: string[];
-    preference?: AdminStudentPreference;
-}
-
-export interface AdminLlmLog {
-    timestamp: string;
-    module?: string;
-    metadata?: Record<string, unknown>;
-    request?: {
-        model?: string;
-        messages?: Array<{ role: string; content: string }>;
-    };
-    response?: {
-        usage?: {
-            prompt_tokens?: number;
-            completion_tokens?: number;
-            total_tokens?: number;
-        };
-        choices?: Array<{
-            message?: {
-                content?: string;
-            };
-        }>;
-    };
-}
-
-
-
-
-
 export async function fetchLanguages() {
     const {data} = await apiClient.get<string[]>("/api/languages");
     return data;
@@ -182,22 +132,7 @@ export async function fetchCurrentUser() {
     };
 }
 
-
-export async function fetchAdminTeachers() {
-    const {data} = await apiClient.get<AdminTeacherRecord[]>("/api/teachers");
-    return data;
-}
-
-export async function fetchAdminStudents() {
-    const {data} = await apiClient.get<AdminStudentRecord[]>("/api/students");
-    return data;
-}
-
-export async function fetchAdminLlmLogs() {
-    const {data} = await apiClient.get<AdminLlmLog[]>("/api/llm-logs");
-    return data;
-}
-
+``
 export async function selectPdfForChat(pdfPath: string) {
     const {data} = await apiClient.post("/api/pdf/select", {pdf_path: pdfPath});
     return data as { success: boolean; pdf_path: string };

@@ -87,7 +87,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { AdminStudentRecord, AdminTeacherRecord } from "../../../api/studentTwin";
+import type { AdminStudentRecord, AdminTeacherRecord } from "../../../types/admin";
 
 const searchValue = defineModel<string>("search", { default: "" });
 

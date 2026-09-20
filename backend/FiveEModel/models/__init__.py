@@ -5,6 +5,7 @@ from .chat_sessions import ChatSession
 from .chat_event_data import ChatEventData
 from .course import Course
 from .course_node import CourseNode
+from .course_response import CourseResponse
 from .resource import Resource
 from .twin_profile import TwinProfile
 from .user import User

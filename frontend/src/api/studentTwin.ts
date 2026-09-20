@@ -3,9 +3,6 @@ import { fetchCurrentUser, logoutUser } from "./login";
 import { generateLearningPlanFromQuiz } from "./student";
 
 import type {
-  AdminLlmLog,
-  AdminStudentRecord,
-  AdminTeacherRecord,
   QuizAnswerResponse,
   QuizQuestion,
   QuizStartResponse,
@@ -16,9 +13,6 @@ import type { LearningPlanEntry } from "../types/student";
 import type { IndustryChartRow, IndustryJob, IndustryResult } from "../types/industry";
 
 export type {
-  AdminLlmLog,
-  AdminStudentRecord,
-  AdminTeacherRecord,
   IndustryChartRow,
   IndustryJob,
   IndustryResult,
@@ -28,21 +22,6 @@ export type {
 };
 
 export { fetchCurrentUser, logoutUser, completeQuiz, generateLearningPlanFromQuiz };
-
-export async function fetchAdminTeachers() {
-  const { data } = await apiClient.get<AdminTeacherRecord[]>("/api/teachers");
-  return data;
-}
-
-export async function fetchAdminStudents() {
-  const { data } = await apiClient.get<AdminStudentRecord[]>("/api/students");
-  return data;
-}
-
-export async function fetchAdminLlmLogs() {
-  const { data } = await apiClient.get<AdminLlmLog[]>("/api/llm-logs");
-  return data;
-}
 
 export async function startQuiz(payload: { subject: string; lang_choice?: string }) {
   const { data } = await apiClient.post<QuizStartResponse>("/api/quiz/start", {

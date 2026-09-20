@@ -6,7 +6,7 @@ from typing import Any, AsyncGenerator, List, Optional
 from google.adk import Runner
 from google.genai import types
 
-from .models import ChatRequest, ChatResponse, Course, ChatHistory, ChatEventData, CourseNode
+from .models import ChatRequest, ChatResponse, Course, ChatHistory, ChatEventData, CourseNode, CourseResponse
 from . import rag
 from .session import get_db, get_agent_db, session_service
 from .model import CHROMA_PERSIST_DIRACTORY,DEFAULT_RESOURCE_DIRECTORY
@@ -31,7 +31,7 @@ agent_runner = Runner(
     auto_create_session=True
 )
 
-async def get_history_by_student_and_course(student_id: str, course_id: str) -> List[ChatResponse]:
+async def get_history_by_student_and_course(student_id: str, course_id: int) -> List[ChatResponse]:
     async with get_agent_db as db:
         stmt = select(ChatHistory).filter(
             ChatHistory.user_id == student_id,
@@ -85,6 +85,35 @@ async def get_history_by_student_and_course(student_id: str, course_id: str) -> 
         return results
 
 
+async def get_raw_history_by_student_and_course(student_id: str, course_id: int) -> List[dict]:
+    """返回未经反序列化的原始对话历史（纯 JSON）。
+
+    直接读取 events 表并返回 event_data 的原始结构，
+    不做 ChatEventData 反序列化，也不过滤 function_call / 映射 ChatResponse。
+    """
+    async with get_agent_db as db:
+        stmt = select(ChatHistory).filter(
+            ChatHistory.user_id == student_id,
+            ChatHistory.session_id == course_id
+        ).order_by(ChatHistory.timestamp.asc())
+
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+        results: List[dict] = []
+        for row in rows:
+            if not row.event_data:
+                continue
+            try:
+                results.append(json.loads(row.event_data))
+            except Exception as e:
+                print(f"[service.py] json.loads(row.event_data) 解析失败: {e}")
+                print(f"[service.py] event_data 内容: {row.event_data}")
+                continue
+
+        return results
+
+
 async def chat_message_stream(request: ChatRequest) -> AsyncGenerator[str, None]:
     user_id = request.user_id
     course_id = request.course_id
@@ -105,11 +134,29 @@ async def chat_message_stream(request: ChatRequest) -> AsyncGenerator[str, None]
             yield f"Agent escalated: {event.error_message or 'No specific message'}"
 
 
-async def get_course_id_by_name(course_name: str) -> Optional[str]:    
+async def get_course_id_by_name(course_name: str) -> Optional[int]:    
     async with get_db as db:
         stmt = select(CourseNode.node_detail_id).where(CourseNode.node_name == course_name)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
+
+
+async def get_all_courses() -> List[CourseResponse]:
+    """查询 CourseNode 表，返回所有课程的 node_name 和 node_detail_id。"""
+    async with get_db as db:
+        stmt = select(CourseNode.node_detail_id, CourseNode.node_name).order_by(
+            CourseNode.node_detail_id.asc()
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+        return [
+            CourseResponse(
+                id=row.node_detail_id,
+                name=row.node_name
+            )
+            for row in rows
+        ]
+
 
 async def init_rag() -> None:
     rag.prepare_chroma_db_from_directory(

@@ -4,6 +4,7 @@
       <div class="brand">AI-Education</div>
       <nav class="nav-links">
         <RouterLink to="/admin/dashboard">管理端</RouterLink>
+        <RouterLink to="/admin/student-chat-history">学生对话记录</RouterLink>
       </nav>
       <div class="nav-user">
         <span class="nav-user-name">{{ displayName }}</span>
