@@ -62,6 +62,10 @@ class EntranceAgent(BaseAgent):
         logger.info(f"[{self.name}] Entering ORCHESTRATOR stage.")
         orchestrator_response = await self._run_orchestrator_agent(ctx)
 
+        ctx.session.state["user_id"] = ctx.session.user_id
+        ctx.session.state["course_id"] = ctx.session.id
+        ctx.session.state["agent_prompt"] = orchestrator_response.agent_prompt
+
         agent = None
         if orchestrator_response.target_agent == 'engagement':
             agent = self.engagement_agent
@@ -82,6 +86,7 @@ class EntranceAgent(BaseAgent):
             yield event
 
 
+    # 测试版本
     async def _run_async_implementation(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         user_id = ctx.session.user_id
         lesson_id = ctx.session.id

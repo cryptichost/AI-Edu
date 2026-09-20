@@ -39,15 +39,14 @@ async def _get_course_id_by_name(course_name: str) -> str:
 
 
 async def get_related_course(course_id: str) -> List[str]:
-    course_name = await _get_course_name_by_id(course_id)
     course_id_list = []
     async with SessionLocal1() as db:
-        stmt = select(CourseNode.node_path_json).where(Course.course_id == course_name)
+        stmt = select(CourseNode.node_path_json).where(CourseNode.node_detail_id == course_id)
         result = await db.execute(stmt)
         row = result.first()
         if row:
-            row_json = json.loads(row.node_path_json)
-            for item in row_json:
+            course_list = row.node_path_json
+            for item in course_list:
                 course_id = _get_course_id_by_name(item)
                 course_id_list.append(course_id)
 

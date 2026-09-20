@@ -116,7 +116,7 @@ async def get_raw_history_by_student_and_course(student_id: str, course_id: int)
 
 async def chat_message_stream(request: ChatRequest) -> AsyncGenerator[str, None]:
     user_id = request.user_id
-    course_id = request.course_id
+    course_id = int(request.course_id)
     content = types.Content(
         role='user',
         parts=[
