@@ -32,7 +32,7 @@ agent_runner = Runner(
 )
 
 async def get_history_by_student_and_course(student_id: str, course_id: int) -> List[ChatResponse]:
-    async with get_agent_db as db:
+    async with get_agent_db() as db:
         stmt = select(ChatHistory).filter(
             ChatHistory.user_id == student_id,
             ChatHistory.session_id == course_id
@@ -91,7 +91,7 @@ async def get_raw_history_by_student_and_course(student_id: str, course_id: int)
     直接读取 events 表并返回 event_data 的原始结构，
     不做 ChatEventData 反序列化，也不过滤 function_call / 映射 ChatResponse。
     """
-    async with get_agent_db as db:
+    async with get_agent_db() as db:
         stmt = select(ChatHistory).filter(
             ChatHistory.user_id == student_id,
             ChatHistory.session_id == course_id

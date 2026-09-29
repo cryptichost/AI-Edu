@@ -19,7 +19,7 @@ from .models import (
     QuizUserRecord,
     QuizRecordResponse
 )
-from .session import get_db
+from FiveEModel.session import get_db
 
 
 def _to_iso(value: Optional[Any]) -> Optional[str]:
@@ -60,7 +60,7 @@ async def list_all_quizzes(course_id: Optional[str]) -> List[QuizListResponse]:
 
     传入 course_id 时，仅返回该课程下的测验（通过 quiz.course_id 关联过滤）。
     """
-    async with get_db as db:
+    async with get_db() as db:
         stmt = (
             select(
                 Quiz.id,
@@ -138,7 +138,7 @@ async def start_record(quiz_id: int, user_id: int) -> Optional[Dict[str, Any]]:
     - 记录只保存进入/提交时间，不保存逐题作答明细；
     - quiz 不存在时返回 None。
     """
-    async with get_db as db:
+    async with get_db() as db:
         quiz = (
             await db.execute(select(Quiz.id).where(Quiz.id == quiz_id))
         ).scalar_one_or_none()
@@ -162,7 +162,7 @@ async def submit_record(record_id: int) -> Optional[Dict[str, Any]]:
 
     重复提交保留首次提交时间，避免刷新历史记录。
     """
-    async with get_db as db:
+    async with get_db() as db:
         record = (
             await db.execute(select(QuizUserRecord).where(QuizUserRecord.id == record_id))
         ).scalar_one_or_none()
@@ -181,7 +181,7 @@ async def get_quiz_detail_by_record(record_id: int) -> Optional[Dict[str, Any]]:
 
     返回作答记录 + 对应测验 + 题目列表(含选项与作答)；记录不存在时返回 None。
     """
-    async with get_db as db:
+    async with get_db() as db:
         record = (
             await db.execute(select(QuizUserRecord).where(QuizUserRecord.id == record_id))
         ).scalar_one_or_none()
@@ -337,7 +337,7 @@ async def get_take_questions_by_quiz(quiz_id: int) -> Optional[List[QuizTakeQues
     - 作答过程不判分，因此响应中刻意剔除 is_correct / analysis，避免前端拿到答案；
     - quiz 不存在时返回 None。
     """
-    async with get_db as db:
+    async with get_db() as db:
         quiz = (
             await db.execute(select(Quiz).where(Quiz.id == quiz_id))
         ).scalar_one_or_none()
@@ -393,7 +393,7 @@ async def update_question_by_id(
     - 未带 id 的选项：作为新增选项插入；
     - 未在本次提交中的旧选项：删除。
     """
-    async with get_db as db:
+    async with get_db() as db:
         question = (
             await db.execute(
                 select(QuizQuestion).where(QuizQuestion.id == question_id)
@@ -499,7 +499,7 @@ async def create_question_by_quiz(
     - payload.options 全部作为新增选项插入；
     - 同步 quiz.question_count / quiz.total_score，保证列表数量与总分正确。
     """
-    async with get_db as db:
+    async with get_db() as db:
         quiz = (
             await db.execute(select(Quiz).where(Quiz.id == quiz_id))
         ).scalar_one_or_none()
