@@ -135,7 +135,7 @@ async def chat_message_stream(request: ChatRequest) -> AsyncGenerator[str, None]
 
 
 async def get_course_id_by_name(course_name: str) -> Optional[int]:    
-    async with get_db as db:
+    async with get_db() as db:
         stmt = select(CourseNode.node_detail_id).where(CourseNode.node_name == course_name)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -143,7 +143,7 @@ async def get_course_id_by_name(course_name: str) -> Optional[int]:
 
 async def get_all_courses() -> List[CourseResponse]:
     """查询 CourseNode 表，返回所有课程的 node_name 和 node_detail_id。"""
-    async with get_db as db:
+    async with get_db() as db:
         stmt = select(CourseNode.node_detail_id, CourseNode.node_name).order_by(
             CourseNode.node_detail_id.asc()
         )

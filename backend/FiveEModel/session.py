@@ -28,12 +28,13 @@ session_db_path = Path("data") / "fivee_sessions.db"
 session_db_path.parent.mkdir(parents=True, exist_ok=True)
 DB2_URL = os.getenv("SESSION_DATABASE_URL", f"sqlite+aiosqlite:///{session_db_path.as_posix()}")
 engine2 = create_async_engine(DB2_URL, pool_pre_ping=True)
-SessionLocal2 = async_sessionmaker(autocommit=False, autoflush=False, bind=engine2)
+SessionLocal2 = async_sessionmaker(autocommit=False, autoflush=False, bind=engine2)()
 session_service = DatabaseSessionService(DB2_URL)
 
 # Default alias
-get_db = SessionLocal1()
-get_agent_db = SessionLocal2()
+get_db = SessionLocal1
+get_agent_db = SessionLocal2
+    
 
 async def check_session_exists(user_id: str, course_id: str) -> bool:
     async with SessionLocal2() as db:

@@ -224,3 +224,7 @@ export async function completeQuiz(payload: {
 }
 
 
+export async function getCourseIdByName(courseName: string): Promise<number> {
+    const {data} = await apiClient.post<{ course_id: number }>("/api/5e/course/id-by-name", {course_name: courseName});
+    return data.course_id;
+}
