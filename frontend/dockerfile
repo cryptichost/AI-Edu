@@ -1,0 +1,8 @@
+FROM http-server:latest
+
+COPY ./dist /app/dist
+COPY run.sh /app
+
+WORKDIR /app
+
+CMD ["sh","run.sh"]
