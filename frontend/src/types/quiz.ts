@@ -162,7 +162,6 @@ export interface QuizRecordItem {
   badgeText: string;
   /** 是否为「进行中」的记录（已进入测验但尚未提交）。 */
   pending: boolean;
-  detail?: QuizRecordDetailResponse;
 }
 
 export interface QuizDetailModel {

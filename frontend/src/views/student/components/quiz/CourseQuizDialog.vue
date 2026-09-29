@@ -91,7 +91,6 @@
     <CourseQuizDetailPanel
       v-else-if="view === 'detail'"
       :record-id="detailRecordId"
-      :initial-detail="detailInitialDetail"
       @close="closeDetail"
     />
   </div>
@@ -101,9 +100,9 @@
 import { computed, onMounted, ref, watch } from "vue";
 import CourseQuizTakePanel from "./CourseQuizTakePanel.vue";
 import CourseQuizDetailPanel from "./CourseQuizDetailPanel.vue";
-import { fetchQuizRecordDetail, fetchQuizRecordsByUser } from "../../../../api/quiz.js";
-import type { QuizRecordDetailResponse, QuizRecordResponse } from "../../../../types/quiz.js";
-import { formatTime, serverItemTitle } from "./courseQuizShared";
+import { fetchQuizzesByCourse, fetchQuizRecordsByUser } from "../../../../api/quiz.js";
+import type { QuizRecordResponse } from "../../../../types/quiz.js";
+import { formatTime } from "./courseQuizShared";
 import { getCourseIdByName } from "../../../../api/client.js";
 import type { QuizRecordItem } from "../../../../types/quiz.js";
 
@@ -123,7 +122,8 @@ const taking = ref(false);
 const quizListLoading = ref(false);
 const quizListError = ref("");
 const quizRecords = ref<QuizRecordResponse[]>([]);
-const quizRecordsCache = new Map<number, QuizRecordDetailResponse>();
+/** quiz_id -> 测验标题。列表只需要标题，单独拉一次测验列表即可，不必逐条请求详情。 */
+const quizTitles = ref<Map<number, string>>(new Map());
 
 const numericUserId = computed(() => {
   const value = (props.studentId ?? "").trim();
@@ -150,16 +150,22 @@ async function loadServerRecords() {
   }
 }
 
-/* 将单次加载的测验合并到缓存中 */
-async function expandServerDetails() {
-  for (const item of quizRecords.value) {
-    if (quizRecordsCache.has(item.id)) continue;
-    try {
-      const detail = await fetchQuizRecordDetail(item.id);
-      quizRecordsCache.set(item.id, detail);
-    } catch {
-      /* 单条详情失败不影响其余记录 */
+/* 一次性加载本课程的测验标题，供记录列表展示；标题失败不影响列表。 */
+async function loadQuizTitles() {
+  if (courseId.value == null) {
+    quizTitles.value = new Map();
+    return;
+  }
+  try {
+    const quizzes = await fetchQuizzesByCourse(Number(courseId.value));
+    const map = new Map<number, string>();
+    for (const quiz of Array.isArray(quizzes) ? quizzes : []) {
+      const title = String(quiz.title ?? "").trim();
+      if (title) map.set(quiz.id, title);
     }
+    quizTitles.value = map;
+  } catch {
+    quizTitles.value = new Map();
   }
 }
 
@@ -168,18 +174,16 @@ const mergedRecords = computed<QuizRecordItem[]>(() => {
 
   const items = quizRecords.value
     .map((record) => {
-      const detail = quizRecordsCache.get(record.id);
       const pending = !record.submit_at;
       const happenedAt = record.submit_at ?? record.start_at ?? undefined;
       return {
         key: `server:${record.id}`,
         recordId: record.id,
-        title: detail ? serverItemTitle(detail, record.id) : `测验记录 #${record.id}`,
+        title: recordTitle(record),
         timeText: `${pending ? "开始于" : "完成于"} ${formatTime(happenedAt)}`,
         submittedAt: happenedAt ?? undefined,
         badgeText: pending ? "进行中" : "已提交",
         pending,
-        detail,
       };
     });
 
@@ -190,25 +194,26 @@ const mergedRecords = computed<QuizRecordItem[]>(() => {
   });
 });
 
+/** 记录标题：优先取 quiz_id 对应的测验标题，取不到时回退到记录 id。 */
+function recordTitle(record: QuizRecordResponse): string {
+  const title = record.quiz_id != null ? quizTitles.value.get(record.quiz_id) : undefined;
+  return title && title.trim() ? title : `测验记录 #${record.id}`;
+}
+
 async function reload() {
   quizListError.value = "";
   quizListLoading.value = true;
   try {
-    // 顺序执行：详情里的 course_name 用于按课程过滤记录，必须先拿到。
-    await loadServerRecords();
-    await expandServerDetails();
+    // 记录与标题各请求一次；作答详情留到进入详情视图时再按需加载。
+    await Promise.all([loadServerRecords(), loadQuizTitles()]);
   } finally {
     quizListLoading.value = false;
   }
 }
 
-/* ----- 作答详情（展示交给 CourseQuizDetailPanel） ----- */
+/* ----- 作答详情（详情数据由 CourseQuizDetailPanel 进入时自行请求） ----- */
 /** 当前正在查看的记录 id；为 null 表示未打开详情。 */
 const detailRecordId = ref<number | null>(null);
-/** 复用记录列表已缓存的详情，避免打开详情时重复请求。 */
-const detailInitialDetail = computed(() =>
-  detailRecordId.value != null ? quizRecordsCache.get(detailRecordId.value) : undefined
-);
 
 function openRecord(item: QuizRecordItem) {
   detailRecordId.value = item.recordId;
@@ -238,7 +243,6 @@ async function handleQuizStarted(recordId: number) {
   if (!quizRecords.value.some((record) => record.id === recordId)) {
     // 兜底：列表接口未按预期返回时，至少把这条记录补进列表。
     quizRecords.value = [{ id: recordId, user_id: Number(numericUserId.value) || null }, ...quizRecords.value];
-    void expandServerDetails();
   }
 }
 
@@ -273,7 +277,7 @@ watch(
   () => [props.studentId, props.courseName],
   () => {
     void getCourseId();
-    quizRecordsCache.clear();
+    quizTitles.value = new Map();
   }
 );
 

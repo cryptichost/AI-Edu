@@ -83,8 +83,6 @@ import { formatTime, isTruthy, parseQuestion, serverItemTitle } from "./courseQu
 const props = defineProps<{
   /** 要查看的作答记录 id。 */
   recordId: number | null;
-  /** 父组件已缓存的详情，传入后不再重复请求。 */
-  initialDetail?: QuizRecordDetailResponse;
 }>();
 
 const emit = defineEmits<{ (e: "close"): void }>();
@@ -183,16 +181,9 @@ function buildDetailFromServer(detail: QuizRecordDetailResponse): QuizDetailMode
   };
 }
 
-/** 加载作答详情：优先使用父组件传入的缓存，没有缓存时再请求后台。 */
+/** 加载作答详情：进入详情视图时按需请求后台（列表阶段不预取）。 */
 async function loadDetail() {
   if (props.recordId == null) return;
-
-  if (props.initialDetail) {
-    loading.value = false;
-    error.value = "";
-    model.value = buildDetailFromServer(props.initialDetail);
-    return;
-  }
 
   loading.value = true;
   error.value = "";
@@ -209,7 +200,7 @@ async function loadDetail() {
 }
 
 watch(
-  () => [props.recordId, props.initialDetail],
+  () => props.recordId,
   () => {
     void loadDetail();
   }
