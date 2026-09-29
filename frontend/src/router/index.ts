@@ -31,6 +31,7 @@ const TeacherResearchView = () => import("../views/teacher/TeacherResearchView.v
 const TeacherCourseTwinView = () => import("../views/teacher/TeacherCourseTwinView.vue");
 const TeacherTwinDrilldownView = () => import("../views/teacher/TeacherTwinDrilldownView.vue");
 const TeacherIndustryIntelligenceView = () => import("../views/teacher/TeacherIndustryIntelligenceView.vue");
+const TeacherQuizListView = () => import("../views/teacher/TeacherQuizListView.vue");
 
 const router = createRouter({
     history: createWebHistory(),
@@ -181,6 +182,11 @@ const router = createRouter({
                     name: "teacher-industry-intelligence",
                     component: TeacherIndustryIntelligenceView,
                 },
+                {
+                    path: "quiz",
+                    name: "teacher-quiz",
+                    component: TeacherQuizListView,
+                }
             ],
         },
         {

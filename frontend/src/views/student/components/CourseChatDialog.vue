@@ -2,37 +2,10 @@
   <div class="fivee-chat">
     <div class="fivee-chat-head">
       <div>
-        <strong>{{ nodeName || courseName || "5E AI 助教" }}</strong>
+        <strong>{{ props.courseName || "5E AI 助教" }}</strong>
         <p>{{ subtitle }}</p>
       </div>
     </div>
-
-    <section v-if="studentFeedback" class="fivee-feedback" aria-label="5E 引导反馈">
-      <div class="fivee-feedback-top">
-        <div>
-          <span class="fivee-feedback-label">本轮引导反馈</span>
-          <strong>{{ studentFeedback.effectiveness_level || evidenceStatusLabel(studentFeedback.evidence_status) }}</strong>
-        </div>
-        <span class="fivee-status-pill">{{ evidenceStatusLabel(studentFeedback.evidence_status) }}</span>
-      </div>
-
-      <p>{{ studentFeedback.summary }}</p>
-      <p class="fivee-policy">{{ effectivenessPolicyText }}</p>
-
-      <div v-if="recentStudentEvidence.length" class="fivee-evidence-list">
-        <article v-for="item in recentStudentEvidence" :key="evidenceKey(item)" class="fivee-evidence-item">
-          <div>
-            <strong>{{ stageLabel(item.stage) }}</strong>
-            <span>{{ evidenceStatusLabel(item.evidence_status) }}</span>
-          </div>
-          <p>{{ item.student_feedback || item.summary || "已记录一次 5E 学习互动。" }}</p>
-        </article>
-      </div>
-
-      <ul v-if="studentFeedback.next_steps?.length">
-        <li v-for="step in studentFeedback.next_steps.slice(0, 3)" :key="step">{{ step }}</li>
-      </ul>
-    </section>
 
     <div ref="scrollRef" class="fivee-chat-scroll">
       <article
@@ -100,19 +73,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import Markdown from "../../../components/ui/markdown.vue";
-import { fetchChatHistory, fetchFiveEEffectivenessSummary, sendFiveEChatMessage } from "../../../api/5E";
-import type {
-  Button,
-  ChatResponse,
-  FiveEEffectivenessEvidence,
-  FiveEEffectivenessSummary,
-} from "../../../types/5E";
+import { fetchChatHistory, sendFiveEChatMessage } from "../../../api/5E";
+import { getCourseIdByName } from "../../../api/client";
+import type { Button, ChatResponse } from "../../../types/5E";
 
 const props = defineProps<{
-  courseId?: string;
   studentId?: string;
   courseName?: string;
-  nodeName?: string;
   resourceLabel?: string;
 }>();
 
@@ -121,32 +88,17 @@ defineEmits<{
   (event: "open-test", id: string): void;
 }>();
 
+const courseId = ref<number|undefined>(undefined);
 const input = ref("");
 const loading = ref(false);
 const scrollRef = ref<HTMLDivElement | null>(null);
 const messages = ref<ChatResponse[]>([]);
-const effectivenessSummary = ref<FiveEEffectivenessSummary | null>(null);
 
-const canChat = computed(() => Boolean(props.studentId && props.courseId));
+const canChat = computed(() => Boolean(props.studentId && props.courseName));
 const subtitle = computed(() => {
   if (!canChat.value) return "正在获取当前学生信息...";
-  if (props.resourceLabel) return `结合当前资源：${props.resourceLabel}`;
-  if (props.nodeName) return "围绕当前知识点进行 5E 学习引导";
-  return "选择课程节点后，助教会结合上下文进行引导";
-});
-const studentFeedback = computed(() => effectivenessSummary.value?.student_view || null);
-const recentStudentEvidence = computed(() =>
-  (effectivenessSummary.value?.recent_evidence || []).slice(0, 3),
-);
-const effectivenessPolicyText = computed(() => {
-  const status = studentFeedback.value?.evidence_status || effectivenessSummary.value?.evidence_status;
-  if (status === "outcome_supported") {
-    return "5E 引导已关联到后续学习结果，可作为诊断和路径推荐的辅助证据，但不会直接改写知识点掌握度。";
-  }
-  if (status === "insufficient_evidence" || status === "empty") {
-    return "当前依据不足，系统会优先提示补充测验、作业或学习记录，不会强行判断学习效果。";
-  }
-  return "5E 引导记录只反映学习过程和互动质量，是辅助证据，不直接改写知识点掌握度。";
+  if (props.courseName) return "围绕当前知识点进行 5E 学习引导";
+  return "";
 });
 
 function nowSeconds() {
@@ -164,37 +116,26 @@ function assistantMessage(content: string): ChatResponse {
   };
 }
 
+const defaultAssistantMessage:ChatResponse = {
+  role: "assistant",
+  content: "你好，我是 5E AI 助教。你可以问我当前知识点怎么理解、怎么应用，或让我们开始一次探究式学习。",
+  buttons: [
+    {
+      show_text: "开始学习",
+      send_text: "开始学习",
+    }
+  ],
+  resources: [],
+  tests: [],
+  timestamp: nowSeconds(),
+};
+
 function messageClass(role: string) {
   return role === "user" ? "user" : "assistant";
 }
 
 function hasActions(msg: ChatResponse) {
   return Boolean(msg.buttons?.length || msg.resources?.length || msg.tests?.length);
-}
-
-function evidenceStatusLabel(status?: string | null) {
-  const labels: Record<string, string> = {
-    outcome_supported: "结果证据已支撑",
-    process_only: "仅过程记录",
-    insufficient_evidence: "依据待补充",
-    empty: "暂无记录",
-  };
-  return labels[String(status || "")] || "引导反馈";
-}
-
-function stageLabel(stage?: string | null) {
-  const labels: Record<string, string> = {
-    engagement: "导入参与",
-    exploration: "探索资源",
-    explanation: "解释建构",
-    elaboration: "迁移应用",
-    evaluation: "测评反馈",
-  };
-  return labels[String(stage || "")] || "学习互动";
-}
-
-function evidenceKey(item: FiveEEffectivenessEvidence) {
-  return `${item.record_id || item.calculated_at || item.stage || "evidence"}-${item.node_id || "node"}`;
 }
 
 async function scrollToBottom() {
@@ -204,33 +145,22 @@ async function scrollToBottom() {
   }
 }
 
-async function refreshEffectivenessSummary() {
-  if (!props.studentId || !props.courseId) {
-    effectivenessSummary.value = null;
-    return;
-  }
-  effectivenessSummary.value = await fetchFiveEEffectivenessSummary({
-    course_id: props.courseId,
-    student_username: props.studentId,
-    limit: 50,
-  });
-}
-
 async function loadChatHistory() {
-  if (!props.studentId || !props.courseId) {
-    messages.value = [assistantMessage("登录后即可使用 5E AI 助教。")];
-    effectivenessSummary.value = null;
+  if(props.courseName){
+   courseId.value = await getCourseIdByName(props.courseName);
+  }
+  if (!props.studentId || !courseId.value) {
+    messages.value = [assistantMessage("登录并选择课程后即可使用 5E AI 助教。")];
     return;
   }
 
   try {
-    const [history] = await Promise.all([fetchChatHistory(props.studentId, props.courseId), refreshEffectivenessSummary()]);
+    const history = await fetchChatHistory(props.studentId, courseId.value);
     messages.value = history.length
       ? history
-      : [assistantMessage("你好，我是 5E AI 助教。你可以问我当前知识点怎么理解、怎么应用，也可以让我带你完成一次探究式学习。")];
+      : [defaultAssistantMessage];
   } catch {
     messages.value = [assistantMessage("历史对话暂时加载失败，但你仍然可以直接开始提问。")];
-    effectivenessSummary.value = null;
   }
 
   await scrollToBottom();
@@ -238,7 +168,7 @@ async function loadChatHistory() {
 
 async function sendMessage() {
   const message = input.value.trim();
-  if (!message || loading.value || !props.studentId || !props.courseId) return;
+  if (!message || loading.value || !props.studentId || !courseId.value) return;
 
   messages.value.push({
     role: "user",
@@ -258,9 +188,8 @@ async function sendMessage() {
   try {
     const result = await sendFiveEChatMessage({
       content: message,
-      courseId: props.courseId,
+      courseId: courseId.value,
       studentId: props.studentId,
-      nodeId: props.nodeName || null,
       onChunk: (chunk) => {
         try {
           messages.value[assistantIndex] = JSON.parse(chunk) as ChatResponse;
@@ -270,11 +199,6 @@ async function sendMessage() {
       },
     });
     messages.value[assistantIndex] = result;
-    try {
-      await refreshEffectivenessSummary();
-    } catch {
-      effectivenessSummary.value = null;
-    }
   } catch (error) {
     messages.value[assistantIndex] = assistantMessage(
       error instanceof Error ? error.message : "5E 助教响应失败，请稍后再试。",
@@ -291,25 +215,24 @@ async function handleNormalButton(btn: Button) {
 }
 
 watch(
-  () => [props.courseId, props.studentId],
+  () => [props.courseName, props.studentId],
   () => {
     void loadChatHistory();
   },
 );
 
 onMounted(() => {
-  void loadChatHistory();
+    void loadChatHistory();
 });
 </script>
 
 <style scoped>
 .fivee-chat {
   display: flex;
-  min-height: 0;
+  min-height: 560px;
   height: 100%;
   flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
+  gap: 12px;
 }
 
 .fivee-chat-head {
@@ -331,111 +254,17 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-.fivee-feedback {
-  display: grid;
-  gap: 8px;
-  max-height: min(34vh, 360px);
-  overflow-y: auto;
-  padding: 12px;
-  border: 1px solid #bfdbfe;
-  border-radius: 8px;
-  background: #f8fbff;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
-}
-
-.fivee-feedback-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.fivee-feedback-label {
-  display: block;
-  margin-bottom: 3px;
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.fivee-feedback strong {
-  color: #0f172a;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.fivee-status-pill {
-  flex: 0 0 auto;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.fivee-feedback p,
-.fivee-feedback ul {
-  margin: 0;
-  color: #334155;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.fivee-policy {
-  padding: 8px 10px;
-  border-left: 3px solid #38bdf8;
-  background: #f0f9ff;
-}
-
-.fivee-evidence-list {
-  display: grid;
-  gap: 6px;
-}
-
-.fivee-evidence-item {
-  display: grid;
-  gap: 4px;
-  padding: 8px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.fivee-evidence-item div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.fivee-evidence-item strong {
-  font-size: 12px;
-}
-
-.fivee-evidence-item span {
-  color: #64748b;
-  font-size: 11px;
-}
-
-.fivee-feedback ul {
-  padding-left: 18px;
-}
-
 .fivee-chat-scroll {
   flex: 1;
-  min-height: 0;
+  min-height: 360px;
   overflow-y: auto;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #f8fafc;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
 }
 
 .fivee-chat-bubble {
@@ -509,7 +338,7 @@ onMounted(() => {
 .fivee-chat-footer textarea {
   width: 100%;
   resize: vertical;
-  min-height: 72px;
+  min-height: 82px;
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;

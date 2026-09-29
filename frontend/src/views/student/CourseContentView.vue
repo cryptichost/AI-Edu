@@ -265,25 +265,9 @@
 
             <!-- 在线测验面板 -->
             <div v-else-if="activeViewerTab === 'quiz'" class="student-learning-v2-viewer-panel">
-              <div class="student-learning-v2-quiz-entry">
-                <h3>{{ currentNode.name }} - 在线测验</h3>
-                <p>围绕当前知识点快速开始测验，检验学习效果。</p>
-                <button type="button" class="primary-link button-like" @click="openQuiz">
-                  开始测验
-                </button>
-                <div class="student-learning-v2-quiz-topics">
-                  <p class="topics-label">快捷主题：</p>
-                  <button type="button" class="topic-chip" @click="quickQuiz('大数据基础概念')">
-                    大数据基础概念
-                  </button>
-                  <button type="button" class="topic-chip" @click="quickQuiz('数据获取')">
-                    数据获取
-                  </button>
-                  <button type="button" class="topic-chip" @click="quickQuiz('数据预处理')">
-                    数据预处理
-                  </button>
-                </div>
-              </div>
+              <CourseQuizDialog 
+              :student-id="currentStudentId"
+              :course-name="currentNode?.name"/>
             </div>
 
             <!-- 知识总结面板 -->
@@ -340,10 +324,8 @@
       <!-- 右栏：5E 智能体 -->
       <aside class="student-learning-v2-right-panel">
         <CourseChatDialog
-          :course-id="currentCourseId"
           :student-id="currentStudentId"
-          :course-name="currentCourseName"
-          :node-name="currentNode?.name"
+          :course-name="currentNode?.name"
           :resource-label="selectedResource ? resourceLabel(selectedResource, selectedResourceIndex ?? 0) : ''"
           @open-resource="handleFiveEResource"
           @open-test="handleFiveETest"
@@ -357,6 +339,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import CourseChatDialog from "./components/CourseChatDialog.vue";
+import CourseQuizDialog from "./components/quiz/CourseQuizDialog.vue";
 import TrackedResourceFrame from "./components/TrackedResourceFrame.vue";
 import {
   generateCourseSummary,
@@ -368,14 +351,15 @@ import {CourseNode, KnowledgeGraphResponse} from "../../types/knowledgeGraph";
 import type { StudentCourseSummary } from "../../types/student";
 import type { HomeworkAssignment } from "../../types/homework";
 import {fetchKnowledgeGraph} from "../../api/knowledgeGraph";
+import { fetchCourseIdByName } from "../../api/5E";
 
 const route = useRoute();
 const router = useRouter();
 
-// Viewer tab 状态
+// Viewer tab 状态（默认停留在在线测验）
 type ResourceCategoryTab = "bilibili" | "youtube" | "document" | "csdn";
 type ViewerTab = ResourceCategoryTab | "quiz" | "summary";
-const activeViewerTab = ref<ViewerTab>("bilibili");
+const activeViewerTab = ref<ViewerTab>("quiz");
 
 const graph = ref<KnowledgeGraphResponse | null>(null);
 const graphLoading = ref(true);
@@ -416,9 +400,6 @@ const summaryLoading = ref(false);
 const courseHomework = ref<HomeworkAssignment[]>([]);
 const courseHomeworkLoading = ref(false);
 const courseHomeworkError = ref("");
-const nodeHomework = ref<HomeworkAssignment[]>([]);
-const nodeHomeworkLoading = ref(false);
-const nodeHomeworkError = ref("");
 const selectedResourceStartedAt = ref<number | null>(null);
 
 const chapterNodes = computed(() => graph.value?.children ?? []);
@@ -570,12 +551,6 @@ function encodePdfResourcePath(path: string) {
     .join("/");
 }
 
-const heroBadges = computed(() => [
-  `章节 ${chapterNodes.value.length}`,
-  `当前节点 ${currentNode.value?.name ?? "未选择"}`,
-  `资料 ${currentResources.value.length}`,
-]);
-
 // 资源分类
 const visibleResourceCards = computed(() =>
   currentResources.value
@@ -615,7 +590,6 @@ const canNavigatePrev = computed(() => currentNodeIndex.value > 0);
 const canNavigateNext = computed(() => currentNodeIndex.value >= 0 && currentNodeIndex.value < selectableNodes.value.length - 1);
 const isBookmarked = computed(() => Boolean(currentNodeKey.value && bookmarkedNodeKeys.value.has(currentNodeKey.value)));
 const hasCurrentNote = computed(() => Boolean(currentNodeKey.value && (notesByNode.value[currentNodeKey.value] ?? "").trim()));
-const isCompleted = computed(() => Boolean(currentNodeKey.value && completedNodeKeys.value.has(currentNodeKey.value)));
 const currentTrackingNodeId = computed(() =>
   currentNode.value ? (getNodeIdentifier(currentNode.value) || currentNode.value.name) : "",
 );
@@ -643,12 +617,13 @@ function resourceCardsForTab(tab: ViewerTab) {
   return [];
 }
 
-function firstAvailableResourceTab(): ViewerTab {
-  for (const tab of resourceViewerTabs.value) {
-    if (tab.count > 0) return tab.key;
-  }
-  return "bilibili";
-}
+// 原有逻辑：按页签顺序返回第一个有资源的分类页签（配合 selectNode 自动跳转 B站，现已注释停用）
+// function firstAvailableResourceTab(): ViewerTab {
+//   for (const tab of resourceViewerTabs.value) {
+//     if (tab.count > 0) return tab.key;
+//   }
+//   return "quiz";
+// }
 
 function sectionNodes(chapter: CourseNode) {
   return chapter.grandchildren ?? [];
@@ -748,15 +723,13 @@ async function selectNode(node: CourseNode) {
   summaryTopic.value = node.name;
   summaryText.value = "";
   summaryError.value = "";
-  nodeHomework.value = [];
-  nodeHomeworkError.value = "";
   
   selectedResource.value = "";
   selectedResourceIndex.value = null;
-  activeViewerTab.value = "bilibili";
+  // 当前默认停留在“在线测验”页签
+  activeViewerTab.value = "quiz";
 
   updateBreadcrumb(node);
-  loadHomeworkForNode(node).catch(() => {});
 
   try {
     const resources = await fetchNodeResources({
@@ -764,11 +737,14 @@ async function selectNode(node: CourseNode) {
       node_name: node.name,
     });
     currentResources.value = Array.isArray(resources) ? resources : [];
-    activeViewerTab.value = firstAvailableResourceTab();
-    const firstResource = resourceCardsForTab(activeViewerTab.value)[0];
-    if (firstResource) {
-      await selectResource(firstResource.url, currentResources.value.indexOf(firstResource.url));
-    }
+    // 原有逻辑：资源加载完成后自动跳到第一个有内容的资源分类页签（通常是 B站），现已注释停用
+    // activeViewerTab.value = firstAvailableResourceTab();
+    // const firstResource = resourceCardsForTab(activeViewerTab.value)[0];
+    // if (firstResource) {
+    //   await selectResource(firstResource.url, currentResources.value.indexOf(firstResource.url));
+    // }
+    // 当前默认停留在“在线测验”页签
+    activeViewerTab.value = "quiz";
   } catch (error) {
     currentResources.value = [];
     nodeResourceError.value = error instanceof Error ? error.message : "当前知识点绑定资源加载失败";
@@ -885,24 +861,6 @@ function ensureChapterOpenForNode(node: CourseNode) {
   }
 }
 
-async function loadHomeworkForNode(node: CourseNode) {
-  nodeHomeworkLoading.value = true;
-  nodeHomeworkError.value = "";
-  try {
-    const res = await homeworkListAssignmentsForNode({
-      course_id: currentCourseId.value || "course_big_data",
-      node_id: getNodeIdentifier(node) || undefined,
-      node_name: node.name,
-    });
-    nodeHomework.value = res.assignments || [];
-  } catch (e) {
-    nodeHomework.value = [];
-    nodeHomeworkError.value = e instanceof Error ? e.message : "章节作业加载失败";
-  } finally {
-    nodeHomeworkLoading.value = false;
-  }
-}
-
 async function loadHomeworkForCourse() {
   courseHomeworkLoading.value = true;
   courseHomeworkError.value = "";
@@ -917,19 +875,6 @@ async function loadHomeworkForCourse() {
   } finally {
     courseHomeworkLoading.value = false;
   }
-}
-
-function goHomeworkForCurrentNode() {
-  if (!currentNode.value) {
-    return;
-  }
-  router.push({
-    name: "student-homework",
-    query: {
-      course_id: currentCourseId.value || "course_big_data",
-      node_name: currentNode.value.name,
-    },
-  });
 }
 
 function goHomeworkForCourse() {
@@ -957,11 +902,6 @@ async function selectResource(resource: string, index: number) {
 function getResourceIndex(resource: string) {
   const index = currentResources.value.indexOf(resource);
   return index >= 0 ? index : 0;
-}
-
-function openDocumentResource(resource: BoundResourceCard) {
-  void selectResource(resource.url, getResourceIndex(resource.url));
-  activeViewerTab.value = "document";
 }
 
 function documentViewerUrl(resource: BoundResourceCard) {
@@ -1020,7 +960,7 @@ async function loadCurrentStudent() {
       user_id?: unknown;
       login_id?: unknown;
     };
-    currentStudentId.value = String(user.username ?? user.login_id ?? user.user_id ?? "");
+    currentStudentId.value = String(user.user_id ?? "");
   } catch (error) {
     console.warn("Failed to load current student for 5E assistant", error);
     currentStudentId.value = "";
@@ -1065,22 +1005,6 @@ async function submitSummary() {
   } finally {
     summaryLoading.value = false;
   }
-}
-
-function openQuiz() {
-  const topic = currentNode.value?.name;
-  if (!topic) {
-    alert("请先选择一个知识点");
-    return;
-  }
-  router.push({
-    path: "/student/quiz",
-    query: {
-      topic,
-      node: topic,
-      course_id: currentCourseId.value || "course_big_data",
-    },
-  });
 }
 
 function quickQuiz(topic: string) {
@@ -1198,11 +1122,10 @@ function resetCourseContentState() {
   nodeResourceError.value = "";
   selectedResource.value = "";
   selectedResourceIndex.value = null;
+  activeViewerTab.value = "quiz";
   summaryTopic.value = "";
   summaryText.value = "";
   summaryError.value = "";
-  nodeHomework.value = [];
-  nodeHomeworkError.value = "";
   openChapters.value = [];
   openSections.value = [];
 }

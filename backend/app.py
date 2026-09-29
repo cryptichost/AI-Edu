@@ -57,6 +57,7 @@ from LearningPlanModule.plan_agent import Plan_Agent
 from SummaryModule.summary_agent import Summary_Agent
 from CoordinatorAgentModule.coordinator_agent import Coordinator_Agent
 from QuizModule import generate_learning_plan_from_quiz
+from QuizModule.apis import quiz_router
 from tools.language_handler import LanguageHandler
 from tools.rag_service import get_rag_service
 from tools.covert_resource import convert_to_pdf
@@ -160,6 +161,7 @@ app.include_router(teaching_interaction_router)
 app.include_router(teaching_research_router)
 app.include_router(intervention_router)
 app.include_router(fiveE_router)
+app.include_router(quiz_router)
 
 rag_service = get_rag_service()
 logger = logging.getLogger(__name__)
