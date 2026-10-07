@@ -93,3 +93,26 @@ export interface RawChatEvent {
     /** Unix 时间戳（秒）。 */
     timestamp?: number;
 }
+
+
+export interface AdminLlmLog {
+    timestamp: string;
+    module?: string;
+    metadata?: Record<string, unknown>;
+    request?: {
+        model?: string;
+        messages?: Array<{ role: string; content: string }>;
+    };
+    response?: {
+        usage?: {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            total_tokens?: number;
+        };
+        choices?: Array<{
+            message?: {
+                content?: string;
+            };
+        }>;
+    };
+}

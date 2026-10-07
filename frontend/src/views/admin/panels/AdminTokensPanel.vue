@@ -79,7 +79,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import type { AdminLlmLog } from "../../../api/studentTwin";
+import type { AdminLlmLog } from "../../../types/admin";
 import { init, type ECharts } from "../../../lib/echarts";
 
 type TimeRange = "week" | "month" | "all";

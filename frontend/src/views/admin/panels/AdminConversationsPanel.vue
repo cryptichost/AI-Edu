@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
-import type { AdminLlmLog } from "../../../api/studentTwin";
+import type { AdminLlmLog } from "../../../types/admin";
 
 interface ConversationRow {
   id: number;
