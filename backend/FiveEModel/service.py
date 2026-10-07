@@ -124,7 +124,7 @@ async def chat_message_stream(request: ChatRequest) -> AsyncGenerator[str, None]
         ]
     )
 
-    events = agent_runner.run_async(user_id=user_id, session_id=course_id, new_message=content)
+    events = agent_runner.run_async(user_id=user_id, session_id=str(course_id), new_message=content)
     async for event in events:
         if event.content and event.content.parts:
             for part in event.content.parts:

@@ -47,7 +47,7 @@ async def get_related_course(course_id: str) -> List[str]:
         if row:
             course_list = row.node_path_json
             for item in course_list:
-                course_id = _get_course_id_by_name(item)
+                course_id = await _get_course_id_by_name(item)
                 course_id_list.append(course_id)
 
     return course_id_list
