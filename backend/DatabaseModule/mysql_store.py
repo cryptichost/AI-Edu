@@ -2352,6 +2352,7 @@ class MySQLStore(DatabaseStore):
         source_path: Optional[str] = None,
         lifecycle_status: Optional[str] = None,
         updated_by: Optional[str] = None,
+        new_resource_review_status: str = "enabled",
     ) -> Dict[str, int]:
         """从课程图谱同步课程数据到MySQL"""
         if not isinstance(graph_data, dict):
@@ -2401,6 +2402,7 @@ class MySQLStore(DatabaseStore):
                 return
             node_path = path + [node_name]
             node_id = str(node.get("node_id") or node.get("id") or build_node_id(node_name, node_path)).strip()
+            node["node_id"] = node_id
             nodes.append({
                 "node_id": node_id, "node_name": node_name,
                 "node_path": node_path, "depth": max(len(node_path) - 1, 0),
@@ -2548,11 +2550,12 @@ class MySQLStore(DatabaseStore):
                 for resource in resources:
                     rp = resource["resource_path"][:1000]
                     previous = existing_resource_state.get((str(resource["node_id"]), rp), {})
-                    quality_status = previous.get("quality_status") or "passed"
-                    review_status = previous.get("review_status") or "enabled"
+                    default_status = new_resource_review_status if new_resource_review_status in {"enabled", "pending", "disabled", "rejected"} else "pending"
+                    quality_status = previous.get("quality_status") or ("passed" if default_status == "enabled" else "candidate")
+                    review_status = previous.get("review_status") or default_status
                     is_enabled = previous.get("is_enabled")
                     if is_enabled is None:
-                        is_enabled = 1
+                        is_enabled = int(review_status == "enabled")
                     is_deleted = previous.get("is_deleted")
                     if is_deleted is None:
                         is_deleted = 0
@@ -2651,7 +2654,7 @@ class MySQLStore(DatabaseStore):
                         SELECT course_id, COUNT(*) AS resource_count
                         FROM resources
                         WHERE is_deleted = 0
-                          AND is_enabled = 1
+                          AND is_enabled = 1 AND COALESCE(review_status, 'enabled') = 'enabled'
                         GROUP BY course_id
                     ) rc ON rc.course_id = c.course_id
                     WHERE ce.student_username = %s
@@ -2680,7 +2683,7 @@ class MySQLStore(DatabaseStore):
                             SELECT course_id, COUNT(*) AS resource_count
                             FROM resources
                             WHERE is_deleted = 0
-                              AND is_enabled = 1
+                              AND is_enabled = 1 AND COALESCE(review_status, 'enabled') = 'enabled'
                             GROUP BY course_id
                         ) rc ON rc.course_id = c.course_id
                         WHERE c.lifecycle_status = 'published'
@@ -2742,8 +2745,8 @@ class MySQLStore(DatabaseStore):
                 cursor.execute(
                     """
                     SELECT
-                        COUNT(*) AS resource_count,
-                        SUM(CASE WHEN is_enabled = 1 AND is_deleted = 0 THEN 1 ELSE 0 END) AS enabled_resource_count,
+                        SUM(CASE WHEN is_deleted = 0 THEN 1 ELSE 0 END) AS resource_count,
+                        SUM(CASE WHEN is_enabled = 1 AND review_status = 'enabled' AND is_deleted = 0 THEN 1 ELSE 0 END) AS enabled_resource_count,
                         SUM(CASE WHEN resource_source = 'external' AND is_deleted = 0 THEN 1 ELSE 0 END) AS external_resource_count,
                         SUM(CASE WHEN review_status <> 'enabled' AND is_deleted = 0 THEN 1 ELSE 0 END) AS pending_or_disabled_count
                     FROM resources
@@ -2851,6 +2854,7 @@ class MySQLStore(DatabaseStore):
         status = str(review_status or ("enabled" if is_enabled else "disabled")).strip().lower()
         if status not in {"enabled", "disabled", "pending", "rejected"}:
             status = "enabled" if is_enabled else "disabled"
+        is_enabled = bool(is_enabled) and status == "enabled"
         if not course_id or not node_id or not resource_path:
             return False
         now = self._now()
@@ -2864,7 +2868,7 @@ class MySQLStore(DatabaseStore):
                             review_status = %s,
                             quality_status = %s,
                             updated_at = %s
-                        WHERE course_id = %s AND node_id = %s AND resource_path = %s
+                        WHERE course_id = %s AND node_id = %s AND resource_path = %s AND is_deleted = 0
                         """,
                         (1 if is_enabled else 0, status, quality_status, now, course_id, node_id, resource_path),
                     )
@@ -2875,7 +2879,7 @@ class MySQLStore(DatabaseStore):
                         SET is_enabled = %s,
                             review_status = %s,
                             updated_at = %s
-                        WHERE course_id = %s AND node_id = %s AND resource_path = %s
+                        WHERE course_id = %s AND node_id = %s AND resource_path = %s AND is_deleted = 0
                         """,
                         (1 if is_enabled else 0, status, now, course_id, node_id, resource_path),
                     )
@@ -4617,6 +4621,7 @@ class MySQLStore(DatabaseStore):
                     WHERE r.course_id = %s AND n.node_name = %s
                       AND (r.is_deleted IS NULL OR r.is_deleted = 0)
                       AND (r.is_enabled IS NULL OR r.is_enabled = 1)
+                      AND COALESCE(r.review_status, 'enabled') = 'enabled'
                     ORDER BY r.resource_id
                 """, (course_id, node_name))
                 rows = cursor.fetchall()
