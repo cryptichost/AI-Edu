@@ -65,6 +65,7 @@ class EntranceAgent(BaseAgent):
         ctx.session.state["user_id"] = ctx.session.user_id
         ctx.session.state["course_id"] = ctx.session.id
         ctx.session.state["agent_prompt"] = orchestrator_response.agent_prompt
+        ctx.session.state["stage"] = orchestrator_response.target_agent
 
         agent = None
         if orchestrator_response.target_agent == 'engagement':

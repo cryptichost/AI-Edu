@@ -14,7 +14,7 @@
         class="fivee-chat-bubble"
         :class="messageClass(msg.role)"
       >
-        <div class="fivee-chat-role">{{ msg.role === "user" ? "我" : "5E 助教" }}</div>
+        <div class="fivee-chat-role">{{ msg.role === "user" ? "我" : (msg.stage? `${msg.stage}智能体` : "5E 助教") }}</div>
         <div v-if="msg.role === 'user'" class="fivee-chat-text">{{ msg.content }}</div>
         <Markdown v-else class="fivee-chat-text" :content="msg.content || '正在思考中...'" />
 
@@ -118,6 +118,7 @@ function assistantMessage(content: string): ChatResponse {
 
 const defaultAssistantMessage:ChatResponse = {
   role: "assistant",
+  stage: "Engagement",
   content: "你好，我是 5E AI 助教。你可以问我当前知识点怎么理解、怎么应用，或让我们开始一次探究式学习。",
   buttons: [
     {
@@ -172,6 +173,7 @@ async function sendMessage() {
 
   messages.value.push({
     role: "user",
+    stage: "",
     content: message,
     buttons: [],
     resources: [],
@@ -229,7 +231,7 @@ onMounted(() => {
 <style scoped>
 .fivee-chat {
   display: flex;
-  min-height: 560px;
+  min-height: 0;
   height: 100%;
   flex-direction: column;
   gap: 12px;
@@ -256,7 +258,7 @@ onMounted(() => {
 
 .fivee-chat-scroll {
   flex: 1;
-  min-height: 360px;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px;
   display: flex;

@@ -9,7 +9,7 @@ from google.genai import types
 from .models import ChatRequest, ChatResponse, Course, ChatHistory, ChatEventData, CourseNode, CourseResponse
 from . import rag
 from .session import get_db, get_agent_db, session_service
-from .model import CHROMA_PERSIST_DIRACTORY,DEFAULT_RESOURCE_DIRECTORY
+from .model import CHROMA_PERSIST_DIRECTORY,DEFAULT_RESOURCE_DIRECTORY
 from .agents import engagement_agent, exploration_agent, explanation_agent, elaboration_agent, evaluation_agent, orchestrator_agent, EntranceAgent
 
 from sqlalchemy import select
@@ -75,6 +75,7 @@ async def get_history_by_student_and_course(student_id: str, course_id: int) -> 
                     # Map ChatEventData to ChatResponse with flattened content and action items
                     results.append(ChatResponse(
                         role=event_data.author,
+                        stage=part_data.get('stage',''),
                         content=part_data.get('content'),
                         buttons=part_data.get('buttons', []),
                         resources=part_data.get('resources', []),
@@ -161,5 +162,5 @@ async def get_all_courses() -> List[CourseResponse]:
 async def init_rag() -> None:
     rag.prepare_chroma_db_from_directory(
         directory_path=DEFAULT_RESOURCE_DIRECTORY,
-        persist_directory=CHROMA_PERSIST_DIRACTORY
+        persist_directory=CHROMA_PERSIST_DIRECTORY
     )

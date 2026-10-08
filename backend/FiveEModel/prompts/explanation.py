@@ -73,6 +73,7 @@ explanation = f"""
 严格按照以下json格式返回，不允许包含无关内容
 
 {{
+  "stage": "Explanation"  // 当前5E阶段，固定不变
   "content": "必填：文字对话内容",
   "buttons": [
     {{

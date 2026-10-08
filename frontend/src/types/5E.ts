@@ -1,6 +1,7 @@
 export interface ChatResponse {
     role: string,
     content: string,
+    stage?: string,
     buttons?: Button[],
     resources?: Resource[],
     tests?: Test[],

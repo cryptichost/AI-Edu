@@ -1204,12 +1204,13 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .student-learning-v2-course-context {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
   gap: 16px;
   align-items: center;
-  margin: 14px 0 18px;
-  padding: 18px 20px;
+  margin: 10px 0 12px;
+  padding: 14px 18px;
   border: 1px solid #d7e2f0;
   border-radius: 10px;
   background: #fff;
@@ -1418,7 +1419,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: #f8fafc;
   border-radius: 0 0 14px 14px;
-  min-height: clamp(560px, 68vh, 760px);
+  min-height: 0;
 }
 
 .student-learning-v2-viewer-empty {
