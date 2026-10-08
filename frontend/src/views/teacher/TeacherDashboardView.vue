@@ -5,7 +5,7 @@
         <p class="eyebrow">教师看板</p>
         <h1>风险处置与证据闭环工作台</h1>
         <p class="hero-desc">
-          先处理风险学生、证据不足和低有效度知识点；AI 只生成建议草稿，教师确认后再下发给学生。
+          先处理风险学生和证据不足的知识点；AI 只生成建议草稿，教师确认后再下发给学生。
         </p>
       </div>
     </section>
@@ -106,6 +106,7 @@
             <div ref="nodeBarChartRef" class="industry-chart teacher-bar-chart"></div>
           </article>
         </div>
+
       </section>
 
       <section v-else-if="activeTab === 'students'" class="teacher-students">
@@ -1160,6 +1161,20 @@ function evidenceLevelClass(level?: string) {
   return "mastery-low";
 }
 
+function evidenceStatusLabel(status?: string | null) {
+  const labels: Record<string, string> = {
+    outcome_supported: "结果已支撑",
+    process_only: "仅过程证据",
+    insufficient_evidence: "依据不足",
+    empty: "暂无记录",
+  };
+  return labels[String(status || "")] || "待判断";
+}
+
+function dimensionScore(value?: number | null) {
+  return value == null ? "待补证" : `${Number(value).toFixed(1)} 分`;
+}
+
 function suggestedActionLabel(action: string) {
   const labels: Record<string, string> = {
     take_quiz: "补充测验",
@@ -1186,6 +1201,17 @@ function evidenceTypeLabel(type?: string) {
     default:
       return "学习证据";
   }
+}
+
+function fiveEStageLabel(stage?: string) {
+  const labels: Record<string, string> = {
+    engagement: "参与",
+    exploration: "探究",
+    explanation: "解释",
+    elaboration: "迁移",
+    evaluation: "评价",
+  };
+  return labels[String(stage || "").toLowerCase()] ?? (stage || "未记录阶段");
 }
 
 function formatEvidenceTime(value?: string | null) {
