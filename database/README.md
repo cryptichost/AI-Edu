@@ -32,9 +32,9 @@ mysql -u ai_education_design -p ai_education_design < database/demo_data.sql
 DB_TYPE=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_USER=ai_education_design
-DB_PASSWORD=ai_education_design
-DB_NAME=ai_education_design
+DB_USER=zyh
+DB_PASSWORD=填写共享数据库密码
+DB_NAME=dev20260912
 DB_CHARSET=utf8mb4
 DB_AUTO_MIGRATE=0
 ```

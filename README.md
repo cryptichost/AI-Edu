@@ -51,11 +51,12 @@ Copy-Item .env.example .env
 DB_TYPE=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_USER=ai_education_design
-DB_PASSWORD=ai_education_design
-DB_NAME=ai_education_design
+DB_USER=zyh
+DB_PASSWORD=填写共享数据库密码
+DB_NAME=dev20260912
 DB_CHARSET=utf8mb4
 DB_AUTO_MIGRATE=0
+AI_EDUCATION_AUTO_SEED_DEFAULT_COURSE=0
 ```
 
 可选模型配置：
@@ -70,6 +71,8 @@ embedding_model=
 如果模型配置为空，依赖 LLM 的页面会返回兜底内容或提示模型服务未配置。
 
 ## 数据库初始化
+
+以下初始化和演示数据导入命令只适用于另建空库；已有共享库不要重复导入。
 
 数据库脚本位于 `database/`：
 
