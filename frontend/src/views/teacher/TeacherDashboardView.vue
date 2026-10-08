@@ -1564,6 +1564,16 @@ onBeforeUnmount(() => {
   table-layout: auto;
 }
 
+.teacher-twin .industry-table th,
+.teacher-twin .industry-table td {
+  padding: 16px 12px;
+  word-break: normal;
+}
+
+.teacher-twin .industry-table th {
+  white-space: nowrap;
+}
+
 .dimension-actions {
   display: flex;
   gap: 8px;
