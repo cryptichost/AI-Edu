@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
@@ -7,7 +8,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from .models import CourseNode,Course
-from .model import MODEL, ENDPOINT, API_KEY, CHROMA_PERSIST_DIRACTORY
+from .model import MODEL, ENDPOINT, API_KEY, CHROMA_PERSIST_DIRECTORY
 from .session import SessionLocal1
 
 from sqlalchemy import select, insert
@@ -50,7 +51,11 @@ def prepare_chroma_db(pdf_path: str, persist_directory: str):
     print(f"ChromaDB created and persisted to {persist_directory}")
 
 def prepare_chroma_db_from_directory(directory_path: str, persist_directory: str):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(
+        separators = ["\n\n","\n","。",","," "],
+        chunk_size=1000,
+        chunk_overlap=200
+        )
     embeddings = get_embedding()
 
     loader = DirectoryLoader(directory_path)
@@ -61,7 +66,7 @@ def prepare_chroma_db_from_directory(directory_path: str, persist_directory: str
 
     if os.path.exists(persist_directory) and os.listdir(persist_directory):
         print(f"ChromaDB already exists in {persist_directory}. Removing the old one...")
-        os.removedirs(persist_directory)
+        shutil.rmtree(persist_directory)
         
     print(f"Creating and persisting new ChromaDB to {persist_directory}...")
     vectordb = Chroma.from_documents(documents=texts, embedding=embeddings, persist_directory=persist_directory)
@@ -101,9 +106,9 @@ def _query_chroma_db(persist_directory: str, query_text: str):
         print(f"Source: {query['source']}")
         print("-" * 30)
 
-if __name__ == '__main___':
+if __name__ == '__main__':
     pdf_file_path = "data/Book/1.pdf"
-    chroma_persist_directory = CHROMA_PERSIST_DIRACTORY
+    chroma_persist_directory = CHROMA_PERSIST_DIRECTORY
 
     # prepare_chroma_db_from_directory(
         # directory_path="data/Book",
@@ -114,13 +119,3 @@ if __name__ == '__main___':
         persist_directory=chroma_persist_directory,
         query_text="什么是大数据基础概念",
     )
-
-def main():
-    with SessionLocal1() as session:
-        stmt = select(Course)
-        rows=session.execute(stmt)
-
-        
-
-if __name__ == '__main__':
-    main()

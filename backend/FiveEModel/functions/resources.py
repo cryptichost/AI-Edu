@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from ..models import Resource
 from ..session import SessionLocal1
+from ..model import CHROMA_PERSIST_DIRECTORY
 
 
 async def get_course_resources(course_id:str) -> List[str]:
@@ -19,7 +20,7 @@ async def query_resources_content(query: str):
         model_name="sentence-transformers/all-MiniLM-L6-v2",
     )
     vector_store = Chroma(
-        persist_directory="chroma_db",
+        persist_directory=CHROMA_PERSIST_DIRECTORY,
         embedding_function=embedding,
     )
 

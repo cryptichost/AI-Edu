@@ -8,8 +8,8 @@ from langchain_openai import OpenAIEmbeddings
 load_dotenv()
 
 DEFAULT_RAG_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-DEFAULT_RESOURCE_DIRECTORY = 'data/Book'
-CHROMA_PERSIST_DIRACTORY = 'fiveE/chroma_db'
+DEFAULT_RESOURCE_DIRECTORY = 'backend/data/Book'
+CHROMA_PERSIST_DIRECTORY = 'backend/data/chroma_db'
 
 API_KEY = os.getenv("NAPI_KEY") or os.getenv("api_key")
 MODEL = os.getenv("MODEL") or os.getenv("model_name")
