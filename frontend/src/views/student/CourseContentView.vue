@@ -265,7 +265,7 @@
 
             <!-- 在线测验面板 -->
             <div v-else-if="activeViewerTab === 'quiz'" class="student-learning-v2-viewer-panel">
-              <CourseQuizDialog 
+              <CourseQuizDialog
               :student-id="currentStudentId"
               :course-name="currentNode?.name"/>
             </div>
@@ -356,10 +356,10 @@ import { fetchCourseIdByName } from "../../api/5E";
 const route = useRoute();
 const router = useRouter();
 
-// Viewer tab 状态（默认停留在在线测验）
-type ResourceCategoryTab = "bilibili" | "youtube" | "document" | "csdn";
+// Viewer tab 状态
+type ResourceCategoryTab = "mooc" | "bilibili" | "youtube" | "document" | "csdn";
 type ViewerTab = ResourceCategoryTab | "quiz" | "summary";
-const activeViewerTab = ref<ViewerTab>("quiz");
+const activeViewerTab = ref<ViewerTab>("bilibili");
 
 const graph = ref<KnowledgeGraphResponse | null>(null);
 const graphLoading = ref(true);
@@ -400,6 +400,9 @@ const summaryLoading = ref(false);
 const courseHomework = ref<HomeworkAssignment[]>([]);
 const courseHomeworkLoading = ref(false);
 const courseHomeworkError = ref("");
+const nodeHomework = ref<HomeworkAssignment[]>([]);
+const nodeHomeworkLoading = ref(false);
+const nodeHomeworkError = ref("");
 const selectedResourceStartedAt = ref<number | null>(null);
 
 const chapterNodes = computed(() => graph.value?.children ?? []);
@@ -408,7 +411,7 @@ const selectedCourse = computed(() =>
 );
 const currentCourseDescription = computed(() => selectedCourse.value?.description || "");
 type BoundResourceKind = "document" | "video-embed" | "external";
-type BoundResourceProvider = "bilibili" | "youtube" | "csdn" | "teacher" | "other";
+type BoundResourceProvider = "mooc" | "bilibili" | "youtube" | "csdn" | "teacher" | "other";
 type BoundResourceCard = {
   url: string;
   title: string;
@@ -425,8 +428,15 @@ function isExternalUrl(path: string) {
   return /^https?:\/\//i.test(path);
 }
 
+/** 慕课视频：中国大学MOOC 的 HLS 切片（.m3u8）。课程数据以它为主资源。 */
+function isMoocResource(path: string) {
+  const value = String(path || "").toLowerCase();
+  return value.includes("mooc") || value.includes("icourse163") || /\.m3u8(?:$|[?#])/i.test(value);
+}
+
 function inferResourceProvider(path: string): BoundResourceProvider {
   const value = path.toLowerCase();
+  if (isMoocResource(path)) return "mooc";
   if (value.includes("bilibili.com")) return "bilibili";
   if (value.includes("youtube.com") || value.includes("youtu.be")) return "youtube";
   if (value.includes("csdn.net")) return "csdn";
@@ -436,6 +446,7 @@ function inferResourceProvider(path: string): BoundResourceProvider {
 
 function providerLabel(provider: BoundResourceProvider) {
   const labels: Record<BoundResourceProvider, string> = {
+    mooc: "慕课",
     bilibili: "B站",
     youtube: "YouTube",
     csdn: "CSDN",
@@ -446,8 +457,10 @@ function providerLabel(provider: BoundResourceProvider) {
 }
 
 function isLegacyCourseVideo(path: string) {
+  // 慕课（.m3u8）是课程主资源，要在学习中心里播放，不能当旧版视频过滤掉
+  if (isMoocResource(path)) return false;
   const value = path.toLowerCase();
-  if (/\.(m3u8|mp4|webm)(?:$|[?#])/i.test(value)) return true;
+  if (/\.(mp4|webm)(?:$|[?#])/i.test(value)) return true;
   if (!isExternalUrl(path)) return false;
   return !value.includes("bilibili.com")
     && !value.includes("youtube.com")
@@ -506,21 +519,28 @@ function buildResourceCard(path: string): BoundResourceCard | null {
   const url = path.trim();
   if (!url || isLegacyCourseVideo(url)) return null;
   const provider = inferResourceProvider(url);
+  // 慕课是 HLS 流，播放器直接吃原始地址（不能用 iframe 嵌 m3u8）
   const embedUrl = provider === "bilibili" || provider === "youtube"
     ? getEmbeddedVideoUrlFromUrl(url)
-    : "";
+    : provider === "mooc"
+      ? url
+      : "";
   const kind: BoundResourceKind = isDocumentPath(url) ? "document" : (embedUrl ? "video-embed" : "external");
   const fileName = decodeURIComponent(url.split(/[/?#]/).filter(Boolean).pop() || url);
-  const title = provider === "teacher"
-    ? fileName.replace(/\.pdf$/i, "")
-    : `${providerLabel(provider)}：${currentNode.value?.name || "知识点资源"}`;
-  const description = provider === "teacher"
-    ? "教师手动绑定或上传的课程资料。"
-    : provider === "csdn"
-      ? "CSDN 内容以外链方式打开。"
-      : embedUrl
-        ? "已内嵌到学习中心，可直接观看。"
-        : "当前绑定的是资源检索页，可打开后选择具体内容。";
+  const title = provider === "mooc"
+    ? `慕课：${currentNode.value?.name || "课程视频"}`
+    : provider === "teacher"
+      ? fileName.replace(/\.pdf$/i, "")
+      : `${providerLabel(provider)}：${currentNode.value?.name || "知识点资源"}`;
+  const description = provider === "mooc"
+    ? "中国大学MOOC 课程视频，可直接在学习中心观看。"
+    : provider === "teacher"
+      ? "教师手动绑定或上传的课程资料。"
+      : provider === "csdn"
+        ? "CSDN 内容以外链方式打开。"
+        : embedUrl
+          ? "已内嵌到学习中心，可直接观看。"
+          : "当前绑定的是资源检索页，可打开后选择具体内容。";
   return {
     url,
     title,
@@ -551,6 +571,12 @@ function encodePdfResourcePath(path: string) {
     .join("/");
 }
 
+const heroBadges = computed(() => [
+  `章节 ${chapterNodes.value.length}`,
+  `当前节点 ${currentNode.value?.name ?? "未选择"}`,
+  `资料 ${currentResources.value.length}`,
+]);
+
 // 资源分类
 const visibleResourceCards = computed(() =>
   currentResources.value
@@ -559,6 +585,9 @@ const visibleResourceCards = computed(() =>
 );
 const documentResourceCards = computed(() =>
   visibleResourceCards.value.filter((resource) => resource.kind === "document"),
+);
+const moocResourceCards = computed(() =>
+  visibleResourceCards.value.filter((resource) => resource.provider === "mooc" && resource.embedUrl),
 );
 const bilibiliResourceCards = computed(() =>
   visibleResourceCards.value.filter((resource) => resource.provider === "bilibili" && resource.embedUrl),
@@ -569,7 +598,9 @@ const youtubeResourceCards = computed(() =>
 const csdnResourceCards = computed(() =>
   visibleResourceCards.value.filter((resource) => resource.provider === "csdn"),
 );
+// 慕课排在最前：课程的主资源是慕课视频，B站/YouTube 作为补充
 const resourceViewerTabs = computed<Array<{ key: ResourceCategoryTab; label: string; count: number }>>(() => [
+  { key: "mooc", label: "慕课", count: moocResourceCards.value.length },
   { key: "bilibili", label: "B站", count: bilibiliResourceCards.value.length },
   { key: "youtube", label: "YouTube", count: youtubeResourceCards.value.length },
   { key: "document", label: "文档", count: documentResourceCards.value.length },
@@ -590,6 +621,7 @@ const canNavigatePrev = computed(() => currentNodeIndex.value > 0);
 const canNavigateNext = computed(() => currentNodeIndex.value >= 0 && currentNodeIndex.value < selectableNodes.value.length - 1);
 const isBookmarked = computed(() => Boolean(currentNodeKey.value && bookmarkedNodeKeys.value.has(currentNodeKey.value)));
 const hasCurrentNote = computed(() => Boolean(currentNodeKey.value && (notesByNode.value[currentNodeKey.value] ?? "").trim()));
+const isCompleted = computed(() => Boolean(currentNodeKey.value && completedNodeKeys.value.has(currentNodeKey.value)));
 const currentTrackingNodeId = computed(() =>
   currentNode.value ? (getNodeIdentifier(currentNode.value) || currentNode.value.name) : "",
 );
@@ -606,10 +638,11 @@ function switchViewerTab(tab: ViewerTab) {
 }
 
 function isResourceCategoryTab(tab: ViewerTab): tab is ResourceCategoryTab {
-  return tab === "bilibili" || tab === "youtube" || tab === "document" || tab === "csdn";
+  return tab === "mooc" || tab === "bilibili" || tab === "youtube" || tab === "document" || tab === "csdn";
 }
 
 function resourceCardsForTab(tab: ViewerTab) {
+  if (tab === "mooc") return moocResourceCards.value;
   if (tab === "bilibili") return bilibiliResourceCards.value;
   if (tab === "youtube") return youtubeResourceCards.value;
   if (tab === "document") return documentResourceCards.value;
@@ -617,13 +650,12 @@ function resourceCardsForTab(tab: ViewerTab) {
   return [];
 }
 
-// 原有逻辑：按页签顺序返回第一个有资源的分类页签（配合 selectNode 自动跳转 B站，现已注释停用）
-// function firstAvailableResourceTab(): ViewerTab {
-//   for (const tab of resourceViewerTabs.value) {
-//     if (tab.count > 0) return tab.key;
-//   }
-//   return "quiz";
-// }
+function firstAvailableResourceTab(): ViewerTab {
+  for (const tab of resourceViewerTabs.value) {
+    if (tab.count > 0) return tab.key;
+  }
+  return "bilibili";
+}
 
 function sectionNodes(chapter: CourseNode) {
   return chapter.grandchildren ?? [];
@@ -636,6 +668,7 @@ function knowledgeNodes(section: CourseNode) {
 function getResourceKinds(node: CourseNode) {
   const resources = visibleLearningCenterResources(normalizeResources(node));
   return {
+    mooc: resources.some((item) => inferResourceProvider(item) === "mooc"),
     bilibili: resources.some((item) => inferResourceProvider(item) === "bilibili"),
     youtube: resources.some((item) => inferResourceProvider(item) === "youtube"),
     csdn: resources.some((item) => inferResourceProvider(item) === "csdn"),
@@ -647,6 +680,7 @@ function getResourceKinds(node: CourseNode) {
 function resourceBadgeText(node: CourseNode) {
   const kinds = getResourceKinds(node);
   const labels = [];
+  if (kinds.mooc) labels.push("慕课");
   if (kinds.bilibili) labels.push("B站");
   if (kinds.youtube) labels.push("YouTube");
   if (kinds.document) labels.push("文档");
@@ -723,13 +757,15 @@ async function selectNode(node: CourseNode) {
   summaryTopic.value = node.name;
   summaryText.value = "";
   summaryError.value = "";
+  nodeHomework.value = [];
+  nodeHomeworkError.value = "";
   
   selectedResource.value = "";
   selectedResourceIndex.value = null;
-  // 当前默认停留在“在线测验”页签
-  activeViewerTab.value = "quiz";
+  activeViewerTab.value = "mooc";
 
   updateBreadcrumb(node);
+  loadHomeworkForNode(node).catch(() => {});
 
   try {
     const resources = await fetchNodeResources({
@@ -737,14 +773,11 @@ async function selectNode(node: CourseNode) {
       node_name: node.name,
     });
     currentResources.value = Array.isArray(resources) ? resources : [];
-    // 原有逻辑：资源加载完成后自动跳到第一个有内容的资源分类页签（通常是 B站），现已注释停用
-    // activeViewerTab.value = firstAvailableResourceTab();
-    // const firstResource = resourceCardsForTab(activeViewerTab.value)[0];
-    // if (firstResource) {
-    //   await selectResource(firstResource.url, currentResources.value.indexOf(firstResource.url));
-    // }
-    // 当前默认停留在“在线测验”页签
-    activeViewerTab.value = "quiz";
+    activeViewerTab.value = firstAvailableResourceTab();
+    const firstResource = resourceCardsForTab(activeViewerTab.value)[0];
+    if (firstResource) {
+      await selectResource(firstResource.url, currentResources.value.indexOf(firstResource.url));
+    }
   } catch (error) {
     currentResources.value = [];
     nodeResourceError.value = error instanceof Error ? error.message : "当前知识点绑定资源加载失败";
@@ -861,6 +894,24 @@ function ensureChapterOpenForNode(node: CourseNode) {
   }
 }
 
+async function loadHomeworkForNode(node: CourseNode) {
+  nodeHomeworkLoading.value = true;
+  nodeHomeworkError.value = "";
+  try {
+    const res = await homeworkListAssignmentsForNode({
+      course_id: currentCourseId.value || "course_big_data",
+      node_id: getNodeIdentifier(node) || undefined,
+      node_name: node.name,
+    });
+    nodeHomework.value = res.assignments || [];
+  } catch (e) {
+    nodeHomework.value = [];
+    nodeHomeworkError.value = e instanceof Error ? e.message : "章节作业加载失败";
+  } finally {
+    nodeHomeworkLoading.value = false;
+  }
+}
+
 async function loadHomeworkForCourse() {
   courseHomeworkLoading.value = true;
   courseHomeworkError.value = "";
@@ -875,6 +926,19 @@ async function loadHomeworkForCourse() {
   } finally {
     courseHomeworkLoading.value = false;
   }
+}
+
+function goHomeworkForCurrentNode() {
+  if (!currentNode.value) {
+    return;
+  }
+  router.push({
+    name: "student-homework",
+    query: {
+      course_id: currentCourseId.value || "course_big_data",
+      node_name: currentNode.value.name,
+    },
+  });
 }
 
 function goHomeworkForCourse() {
@@ -903,6 +967,11 @@ async function selectResource(resource: string, index: number) {
 function getResourceIndex(resource: string) {
   const index = currentResources.value.indexOf(resource);
   return index >= 0 ? index : 0;
+}
+
+function openDocumentResource(resource: BoundResourceCard) {
+  void selectResource(resource.url, getResourceIndex(resource.url));
+  activeViewerTab.value = "document";
 }
 
 function documentViewerUrl(resource: BoundResourceCard) {
@@ -975,7 +1044,8 @@ function handleFiveEResource(resourceId: string) {
     const targetResource = currentResources.value[targetIndex];
     selectResource(targetResource, targetIndex);
     const card = buildResourceCard(targetResource);
-    if (card?.provider === "bilibili" || card?.provider === "youtube" || card?.provider === "csdn") {
+    if (card?.provider === "mooc" || card?.provider === "bilibili"
+        || card?.provider === "youtube" || card?.provider === "csdn") {
       activeViewerTab.value = card.provider;
     } else if (card?.kind === "document") {
       activeViewerTab.value = "document";
@@ -1006,6 +1076,22 @@ async function submitSummary() {
   } finally {
     summaryLoading.value = false;
   }
+}
+
+function openQuiz() {
+  const topic = currentNode.value?.name;
+  if (!topic) {
+    alert("请先选择一个知识点");
+    return;
+  }
+  router.push({
+    path: "/student/quiz",
+    query: {
+      topic,
+      node: topic,
+      course_id: currentCourseId.value || "course_big_data",
+    },
+  });
 }
 
 function quickQuiz(topic: string) {
@@ -1123,10 +1209,11 @@ function resetCourseContentState() {
   nodeResourceError.value = "";
   selectedResource.value = "";
   selectedResourceIndex.value = null;
-  activeViewerTab.value = "quiz";
   summaryTopic.value = "";
   summaryText.value = "";
   summaryError.value = "";
+  nodeHomework.value = [];
+  nodeHomeworkError.value = "";
   openChapters.value = [];
   openSections.value = [];
 }
@@ -1205,13 +1292,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .student-learning-v2-course-context {
-  flex-shrink: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
   gap: 16px;
   align-items: center;
-  margin: 10px 0 12px;
-  padding: 14px 18px;
+  margin: 14px 0 18px;
+  padding: 18px 20px;
   border: 1px solid #d7e2f0;
   border-radius: 10px;
   background: #fff;
@@ -1420,7 +1506,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: #f8fafc;
   border-radius: 0 0 14px 14px;
-  min-height: 0;
+  min-height: clamp(560px, 68vh, 760px);
 }
 
 .student-learning-v2-viewer-empty {
