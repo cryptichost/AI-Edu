@@ -25,3 +25,4 @@ async def query_resources_content(query: str):
     )
 
     docs = await vector_store.asimilarity_search(query=query)
+    return docs
