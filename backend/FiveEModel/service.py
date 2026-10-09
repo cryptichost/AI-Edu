@@ -135,9 +135,12 @@ async def chat_message_stream(request: ChatRequest) -> AsyncGenerator[str, None]
             yield f"Agent escalated: {event.error_message or 'No specific message'}"
 
 
-async def get_course_id_by_name(course_name: str) -> Optional[int]:    
+async def get_course_id_by_name(course: str, course_name: str) -> Optional[int]:    
     async with get_db() as db:
-        stmt = select(CourseNode.node_detail_id).where(CourseNode.node_name == course_name)
+        stmt = select(CourseNode.node_detail_id).where(
+            CourseNode.node_name == course_name,
+            CourseNode.course_id == course
+            )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 

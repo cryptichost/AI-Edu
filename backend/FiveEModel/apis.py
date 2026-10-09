@@ -35,10 +35,11 @@ async def api_get_course_id_by_name(data: CourseNameRequest, session_id: Optiona
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    course = data.course
     course_name = data.course_name
-    course_id = await service.get_course_id_by_name(course_name)
+    course_id = await service.get_course_id_by_name(course, course_name)
     if not course_id:
-        raise HTTPException(status_code=404, detail=f"Course '{course_name}' not found")
+        raise HTTPException(status_code=404, detail=f"Course '{course_name}' in '{course}' not found")
     return {"success": True, "course_id": course_id}
 
 @router.get("/course/all")

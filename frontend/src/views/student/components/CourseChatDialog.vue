@@ -79,7 +79,8 @@ import type { Button, ChatResponse } from "../../../types/5E";
 
 const props = defineProps<{
   studentId?: string;
-  courseName?: string;
+  courseId?: string;  // 课程id
+  courseName?: string;  // 知识点名称
   resourceLabel?: string;
 }>();
 
@@ -147,8 +148,8 @@ async function scrollToBottom() {
 }
 
 async function loadChatHistory() {
-  if(props.courseName){
-   courseId.value = await getCourseIdByName(props.courseName);
+  if(props.courseId && props.courseName){
+   courseId.value = await getCourseIdByName(props.courseId, props.courseName);
   }
   if (!props.studentId || !courseId.value) {
     messages.value = [assistantMessage("登录并选择课程后即可使用 5E AI 助教。")];
@@ -217,7 +218,7 @@ async function handleNormalButton(btn: Button) {
 }
 
 watch(
-  () => [props.courseName, props.studentId],
+  () => [props.courseId, props.courseName, props.studentId],
   () => {
     void loadChatHistory();
   },

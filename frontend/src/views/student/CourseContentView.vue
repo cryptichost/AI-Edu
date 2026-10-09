@@ -267,6 +267,7 @@
             <div v-else-if="activeViewerTab === 'quiz'" class="student-learning-v2-viewer-panel">
               <CourseQuizDialog
               :student-id="currentStudentId"
+              :course-id="currentCourseId"
               :course-name="currentNode?.name"/>
             </div>
 
@@ -325,13 +326,14 @@
       <aside class="student-learning-v2-right-panel">
         <CourseChatDialog
           :student-id="currentStudentId"
+          :course-id="currentCourseId"
           :course-name="currentNode?.name"
           :resource-label="selectedResource ? resourceLabel(selectedResource, selectedResourceIndex ?? 0) : ''"
           @open-resource="handleFiveEResource"
           @open-test="handleFiveETest"
         />
       </aside>
-    </section>
+    </section>git
   </div>
 </template>
 
@@ -351,7 +353,6 @@ import {CourseNode, KnowledgeGraphResponse} from "../../types/knowledgeGraph";
 import type { StudentCourseSummary } from "../../types/student";
 import type { HomeworkAssignment } from "../../types/homework";
 import {fetchKnowledgeGraph} from "../../api/knowledgeGraph";
-import { fetchCourseIdByName } from "../../api/5E";
 
 const route = useRoute();
 const router = useRouter();

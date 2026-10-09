@@ -223,8 +223,11 @@ export async function completeQuiz(payload: {
     return data;
 }
 
-
-export async function getCourseIdByName(courseName: string): Promise<number> {
-    const {data} = await apiClient.post<{ course_id: number }>("/api/5e/course/id-by-name", {course_name: courseName});
+/**
+ * course 课程id
+ * courseName 知识点名称，历史元的导致知识点和课程都使用course表示
+ */
+export async function getCourseIdByName(course:string, courseName: string): Promise<number> {
+    const {data} = await apiClient.post<{ course_id: number }>("/api/5e/course/id-by-name", {course: course, course_name: courseName});
     return data.course_id;
 }

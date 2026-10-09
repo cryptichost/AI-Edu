@@ -108,7 +108,8 @@ import type { QuizRecordItem } from "../../../../types/quiz.js";
 
 const props = defineProps<{
   studentId?: string;
-  courseName?: string;
+  courseId?: string;  // 课程id
+  courseName?: string;  // 知识点名称
 }>();
 
 const courseId = ref<number|undefined>();
@@ -267,14 +268,14 @@ async function handleQuizFinished(recordId: number) {
 }
 
 async function getCourseId() {
-  if(props.courseName){
-   courseId.value = await getCourseIdByName(props.courseName);
+  if(props.courseId && props.courseName){
+   courseId.value = await getCourseIdByName(props.courseId, props.courseName);
   }
 }
 
 /* ----- 生命周期 ----- */
 watch(
-  () => [props.studentId, props.courseName],
+  () => [props.studentId, props.courseId, props.courseName],
   () => {
     void getCourseId();
     quizTitles.value = new Map();
